@@ -1,0 +1,139 @@
+{
+  "version": "1.0",
+  "site": "https://disparorapido.com.br",
+  "updatedAt": "2025-08-20T14:50:12.995Z",
+  "chunks": [
+    {
+      "url": "https://disparorapido.com.br/",
+      "content": "Disparo Rápido Faça envios em massa no WhatsApp com apenas 3 cliques. Envio individual, automatizado e para toda sua base de contatos. Mais de 1.200 empreendedores ativos e média de 10.000 envios mensais. Ideal para profissionais liberais, autônomos, lojistas e infoprodutores. Disparo Rápido Faça envios em massa no WhatsApp com apenas 3 cliques. Envio individual, automatizado e para toda sua base de contatos. Mais de 1.200 empreendedores ativos e média de 10.000 envios mensais.",
+      "vector": [
+        -0.09981618890295829,
+        0.3246027164089722,
+        0.7558014933451163,
+        0.9029750178088607,
+        -0.11670341887883628,
+        0.4665322836241126,
+        0.014951776076903123,
+        -0.2733603945371339,
+        0.5943417707184735,
+        0.9164296131211045
+      ],
+      "metadata": {
+        "title": "Página Inicial",
+        "tags": [
+          "home"
+        ]
+      }
+    },
+    {
+      "url": "https://disparorapido.com.br/#chunk1",
+      "content": "Ideal para profissionais liberais, autônomos, lojistas e infoprodutores.",
+      "vector": [
+        -0.7022854990594531,
+        0.30582605716775957,
+        0.49609023170134625,
+        -0.05075421756825005,
+        0.983196790468464,
+        0.27640584783695354,
+        0.0012955354267907282,
+        0.926552971659246,
+        0.18618485462466605,
+        0.16317581169799666
+      ],
+      "metadata": {
+        "title": "Página Inicial",
+        "tags": [
+          "home"
+        ]
+      }
+    },
+    {
+      "url": "https://disparorapido.com.br/termos-de-uso",
+      "content": "Termos de Uso O Disparo Rápido é uma extensão para o WhatsApp Web que permite o envio automatizado de mensagens. Nossa ferramenta atua via automação no WhatsApp Web, sem utilizar a API oficial. Ao utilizar nosso serviço, você concorda com todos os termos descritos neste documento. Termos de Uso O Disparo Rápido é uma extensão para o WhatsApp Web que permite o envio automatizado de mensagens. Nossa ferramenta atua via automação no WhatsApp Web, sem utilizar a API oficial.",
+      "vector": [
+        0.9584090650139725,
+        -0.707821537587825,
+        0.9459298019043381,
+        -0.6356375340214524,
+        0.6110008000486329,
+        -0.645438956140052,
+        0.5030703872468263,
+        -0.033811190475827146,
+        0.8840225440779363,
+        0.062170994929272805
+      ],
+      "metadata": {
+        "title": "Termos De Uso",
+        "tags": [
+          "termos-de-uso"
+        ]
+      }
+    },
+    {
+      "url": "https://disparorapido.com.br/termos-de-uso#chunk1",
+      "content": "Ao utilizar nosso serviço, você concorda com todos os termos descritos neste documento.",
+      "vector": [
+        0.08561133980370839,
+        -0.6998316837285321,
+        -0.20208673669198918,
+        0.09165544430496775,
+        0.6575806678254792,
+        0.3818201863307955,
+        0.9702879421191537,
+        -0.7948922303703507,
+        -0.5314960800860562,
+        0.6841444877392768
+      ],
+      "metadata": {
+        "title": "Termos De Uso",
+        "tags": [
+          "termos-de-uso"
+        ]
+      }
+    },
+    {
+      "url": "https://disparorapido.com.br/politica-de-privacidade",
+      "content": "Política de Privacidade A Disparo Rápido está comprometida em proteger sua privacidade. Esta Política de Privacidade explica como coletamos, usamos, divulgamos e protegemos suas informações. Política de Privacidade A Disparo Rápido está comprometida em proteger sua privacidade. Esta Política de Privacidade explica como coletamos, usamos, divulgamos e protegemos suas informações.",
+      "vector": [
+        0.8481075772264193,
+        0.14161769415788727,
+        0.4212009415772924,
+        0.5022969017818291,
+        0.41654819338832594,
+        -0.8628078954442326,
+        0.8217907677711156,
+        0.5847118370305724,
+        0.775010288533831,
+        0.26715363174429596
+      ],
+      "metadata": {
+        "title": "Politica De Privacidade",
+        "tags": [
+          "politica-de-privacidade"
+        ]
+      }
+    },
+    {
+      "url": "https://disparorapido.com.br/tutorial",
+      "content": "Tutorial Como usar o Disparo Rápido em 4 passos simples: Instale a extensão no Chrome Carregue seus contatos via CSV ou grupos Configure intervalos entre mensagens Envie textos, áudios, imagens e vídeos automaticamente Tutorial Como usar o Disparo Rápido em 4 passos simples: Instale a extensão no Chrome Carregue seus contatos via CSV ou grupos Configure intervalos entre mensagens Envie textos, áudios, imagens e vídeos automaticamente",
+      "vector": [
+        0.2988302477231164,
+        0.371109884183221,
+        -0.5354849819935881,
+        0.12592053871727105,
+        0.829240144520774,
+        0.10797762117238463,
+        -0.3566054797982354,
+        -0.5633712034471969,
+        -0.8253306263284013,
+        -0.9697949565990931
+      ],
+      "metadata": {
+        "title": "Tutorial",
+        "tags": [
+          "tutorial"
+        ]
+      }
+    }
+  ]
+}

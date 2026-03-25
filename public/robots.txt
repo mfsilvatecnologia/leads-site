@@ -1,0 +1,57 @@
+# Permissões para agentes de IA
+User-agent: GPTBot           # OpenAI/ChatGPT
+Allow: /
+Disallow: /extension/
+Disallow: */extencao-disparo-rapido.zip
+
+User-agent: PerplexityBot    # Perplexity AI
+Allow: /
+Disallow: /extension/
+Disallow: */extencao-disparo-rapido.zip
+
+User-agent: AnthropicAI      # Claude
+Allow: /
+Disallow: /extension/
+Disallow: */extencao-disparo-rapido.zip
+
+User-agent: Google-Extended  # Gemini/Bard
+Allow: /
+Disallow: /extension/
+Disallow: */extencao-disparo-rapido.zip
+
+User-agent: CCBot           # Common Crawl (usado por vários LLMs)
+Allow: /
+Disallow: /extension/
+Disallow: */extencao-disparo-rapido.zip
+
+# Crawlers tradicionais
+User-agent: Googlebot
+Allow: /
+Disallow: /extension/
+Disallow: */extencao-disparo-rapido.zip
+
+User-agent: Bingbot
+Allow: /
+Disallow: /extension/
+Disallow: */extencao-disparo-rapido.zip
+
+User-agent: Twitterbot
+Allow: /
+Disallow: /extension/
+Disallow: */extencao-disparo-rapido.zip
+
+User-agent: facebookexternalhit
+Allow: /
+Disallow: /extension/
+Disallow: */extencao-disparo-rapido.zip
+
+# Áreas restritas e sitemap para todos os bots
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /cliente/login/
+Disallow: /api/
+Disallow: /extension/
+Disallow: */extencao-disparo-rapido.zip
+
+Sitemap: https://disparorapido.com.br/sitemap.xml

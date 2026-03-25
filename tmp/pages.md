@@ -1,0 +1,12 @@
+https://disparorapido.com.br/alterar_licenca
+https://disparorapido.com.br/mensal
+https://disparorapido.com.br/mensal-trial
+https://disparorapido.com.br/anual
+https://disparorapido.com.br/anual-trial
+https://disparorapido.com.br/obrigado
+https://disparorapido.com.br/termos-de-uso
+https://disparorapido.com.br/politica-de-privacidade
+https://disparorapido.com.br/download
+https://disparorapido.com.br/teste-gratis
+https://disparorapido.com.br/download-gratis
+https://disparorapido.com.br/agente-ia
