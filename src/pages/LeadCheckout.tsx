@@ -436,8 +436,8 @@ const LeadCheckout = () => {
                 Melhores Leads de <span className="text-blue-100">Empresas e Negócios</span> do Brasil
               </h1>
               <p className="mt-6 max-w-xl text-lg text-blue-100">
-                Leads coletados diretamente do Google Meu Negócio com Inteligência Artificial. Inclui
-                nome, endereço, telefone, site, e-mail e validação de WhatsApp.
+                Leads coletados diretamente do Google Meu Negócio através de Inteligência Artificial.
+                Inclui nome, endereço, telefone, site, e-mail, Facebook, LinkedIn e validação de WhatsApp.
               </p>
               <div className="mt-8 flex flex-wrap gap-4">
                 <Button
@@ -453,9 +453,9 @@ const LeadCheckout = () => {
                 </div>
               </div>
               <div className="mt-10 flex flex-wrap gap-x-8 gap-y-3 text-sm font-medium text-blue-100">
-                <span>Dados atualizados</span>
+                <span>Dados Atualizados</span>
                 <span>Validação de WhatsApp</span>
-                <span>Prospecção com IA</span>
+                <span>Prospectado com IA</span>
               </div>
             </div>
 
@@ -463,7 +463,7 @@ const LeadCheckout = () => {
               <CardHeader>
                 <CardTitle className="text-2xl text-blue-900">Gere sua lista de leads</CardTitle>
                 <CardDescription className="text-slate-600">
-                  Escolha os filtros, veja o total estimado e continue para o checkout.
+                  Selecione os filtros, confira o total estimado e avance para o checkout seguro.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-5">
@@ -638,9 +638,9 @@ const LeadCheckout = () => {
                 </div>
                 <h3 className="mb-2 text-xl font-bold text-slate-800">{title}</h3>
                 <p className="text-sm text-slate-500">
-                  {idx === 0 && 'Escolha segmento, estado e quantidade da sua lista.'}
-                  {idx === 1 && 'Finalize o pagamento com PIX ou cartão dentro da plataforma.'}
-                  {idx === 2 && 'Receba os leads no e-mail após a confirmação do pagamento.'}
+                  {idx === 0 && 'Selecione os segmentos e os estados que deseja prospectar.'}
+                  {idx === 1 && 'Realize o pagamento de forma segura e rápida diretamente na plataforma.'}
+                  {idx === 2 && 'Receba no e-mail os leads prontos para sua equipe comercial abordar.'}
                 </p>
               </div>
             ))}
@@ -658,23 +658,52 @@ const LeadCheckout = () => {
                 1. A base é atualizada?
               </summary>
               <p className="mt-3 text-sm text-slate-600">
-                Sim. O catálogo é atualizado periodicamente para manter alta qualidade dos dados.
+                Sim. Nossa plataforma utiliza robôs com Inteligência Artificial que realizam varreduras
+                mensalmente para garantir os dados mais atualizados.
               </p>
             </details>
             <details className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <summary className="cursor-pointer list-none font-bold text-slate-800">
-                2. Como recebo os leads?
+                2. Qual a origem dos dados coletados?
               </summary>
               <p className="mt-3 text-sm text-slate-600">
-                Após confirmação do pagamento, os leads são enviados para o e-mail cadastrado.
+                Os dados são extraídos diretamente do Google Meu Negócio para garantir a maior precisão
+                possível. Não utilizamos bases do cartão CNPJ da Receita Federal.
               </p>
             </details>
             <details className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <summary className="cursor-pointer list-none font-bold text-slate-800">
-                3. Posso pagar com PIX?
+                3. Como recebo os leads?
               </summary>
               <p className="mt-3 text-sm text-slate-600">
-                Sim. Você pode pagar com PIX ou cartão de crédito durante o checkout.
+                Após a confirmação do pagamento, os leads são enviados automaticamente para o e-mail
+                cadastrado em formato de planilha.
+              </p>
+            </details>
+            <details className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <summary className="cursor-pointer list-none font-bold text-slate-800">
+                4. A compra é segura?
+              </summary>
+              <p className="mt-3 text-sm text-slate-600">
+                Sim. Utilizamos o gateway de pagamento Asaas, que segue os principais protocolos de segurança.
+              </p>
+            </details>
+            <details className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <summary className="cursor-pointer list-none font-bold text-slate-800">
+                5. Posso pagar com PIX?
+              </summary>
+              <p className="mt-3 text-sm text-slate-600">
+                Sim. Aceitamos PIX com liberação imediata dos leads após confirmação do pagamento.
+                Também aceitamos cartão de crédito.
+              </p>
+            </details>
+            <details className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <summary className="cursor-pointer list-none font-bold text-slate-800">
+                6. Onde recebo a nota fiscal da compra?
+              </summary>
+              <p className="mt-3 text-sm text-slate-600">
+                A nota fiscal de serviço é emitida e enviada automaticamente para o e-mail de cadastro
+                em até 24 horas úteis após a confirmação da transação.
               </p>
             </details>
           </div>
@@ -727,11 +756,17 @@ const LeadCheckout = () => {
                 <span className="text-xl font-bold">Lead Rápido</span>
               </div>
               <p className="max-w-sm text-sm text-blue-100">
-                Plataforma para seleção e compra de leads com filtros por estado e segmento.
+                A maior plataforma de extração de dados do Google Meu Negócio, potencializando o
+                crescimento de empresas B2B em todo o Brasil.
               </p>
+              <div className="mt-4 space-y-1 text-xs text-blue-100/80">
+                <p className="font-bold uppercase text-white">M F SILVA TECNOLOGIA DA INFORMAÇÃO LTDA</p>
+                <p>CNPJ: 35.185.351/0001-07</p>
+                <p>Rua Antônio Torres Penedo, 147, Sala 02, São Joaquim, Franca-SP - CEP 14.406-352</p>
+              </div>
             </div>
             <div className="text-sm">
-              <h4 className="mb-4 text-lg font-bold">Contato</h4>
+              <h4 className="mb-4 text-lg font-bold">Contato e Suporte</h4>
               <ul className="space-y-2">
                 <li>
                   WhatsApp:{' '}
@@ -750,6 +785,7 @@ const LeadCheckout = () => {
             <div className="text-sm md:text-right">
               <h4 className="mb-4 text-lg font-bold">Legal</h4>
               <p className="text-blue-100">Políticas de Privacidade • Termos de Uso • LGPD</p>
+              <p className="mt-6 text-xs text-blue-100/60">Copyright © 2026 Lead Rápido. Todos os direitos reservados.</p>
             </div>
           </div>
         </footer>
