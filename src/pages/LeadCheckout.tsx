@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,6 +32,8 @@ const LeadCheckout = () => {
   const [cepLookupLoading, setCepLookupLoading] = useState(false);
   const [cepLookupError, setCepLookupError] = useState('');
   const [cepResolved, setCepResolved] = useState(false);
+  const checkoutModalScrollRef = useRef<HTMLDivElement | null>(null);
+  const pixSectionRef = useRef<HTMLDivElement | null>(null);
 
   const [form, setForm] = useState({
     buyerName: '',
@@ -89,13 +91,20 @@ const LeadCheckout = () => {
   const chargedAmount = useMemo(() => Math.max(0, grossAmount - discountAmount), [grossAmount, discountAmount]);
 
   const formatCardNumber = (value: string): string => {
-    const digits = value.replace(/\D/g, '').slice(0, 19);
+    const digits = value.replace(/\D/g, '').slice(0, 16);
     return digits.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
   };
 
   const isValidCardNumber = (value: string): boolean => {
     const digits = value.replace(/\D/g, '');
-    return digits.length >= 13 && digits.length <= 19;
+    return digits.length >= 13 && digits.length <= 16;
+  };
+
+  const normalizeCardExpiryYear = (value: string): number => {
+    const digits = String(value || '').replace(/\D/g, '');
+    if (digits.length === 2) return 2000 + Number(digits);
+    if (digits.length === 4) return Number(digits);
+    return NaN;
   };
 
   useEffect(() => {
@@ -197,6 +206,25 @@ const LeadCheckout = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.state, form.segment]);
 
+  useEffect(() => {
+    if (!error) return;
+
+    if (checkoutOpen && checkoutModalScrollRef.current) {
+      checkoutModalScrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [error, checkoutOpen]);
+
+  useEffect(() => {
+    if (!checkoutOpen) return;
+    if (!pixSectionRef.current) return;
+    if (!invoiceUrl && !pixQrCodeImage && !pixCopyPaste) return;
+
+    pixSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [checkoutOpen, invoiceUrl, pixQrCodeImage, pixCopyPaste]);
+
   const applyCoupon = async () => {
     setError('');
     setErrorSupportId(null);
@@ -252,17 +280,17 @@ const LeadCheckout = () => {
       if (form.paymentMethod === 'CREDIT_CARD') {
         const cardDigits = form.cardNumber.replace(/\D/g, '');
         const month = Number(form.cardExpiryMonth);
-        const year = Number(form.cardExpiryYear);
+        const year = normalizeCardExpiryYear(form.cardExpiryYear);
         const cvv = form.cardCvv.replace(/\D/g, '');
 
         if (!isValidCardNumber(form.cardNumber)) {
-          throw new Error('Número do cartão inválido. Use entre 13 e 19 dígitos.');
+          throw new Error('Número do cartão inválido. Use entre 13 e 16 dígitos.');
         }
         if (!Number.isInteger(month) || month < 1 || month > 12) {
           throw new Error('Mês de validade inválido. Use de 01 a 12.');
         }
         if (!Number.isInteger(year) || year < 2024 || year > 2099) {
-          throw new Error('Ano de validade inválido. Use 4 dígitos (ex: 2030).');
+          throw new Error('Ano de validade inválido. Use 2 dígitos (ex: 30) ou 4 dígitos (ex: 2030).');
         }
         const now = new Date();
         const currentYear = now.getFullYear();
@@ -289,6 +317,7 @@ const LeadCheckout = () => {
             ...prev,
             cardNumber: formatCardNumber(cardDigits),
             cardCvv: cvv,
+            cardExpiryYear: String(year),
           }));
         }
       }
@@ -316,7 +345,7 @@ const LeadCheckout = () => {
           holderName: form.cardHolderName,
           number: form.cardNumber.replace(/\D/g, ''),
           expiryMonth: form.cardExpiryMonth.padStart(2, '0'),
-          expiryYear: form.cardExpiryYear,
+          expiryYear: String(normalizeCardExpiryYear(form.cardExpiryYear)),
           ccv: form.cardCvv.replace(/\D/g, ''),
         };
       }
@@ -375,11 +404,12 @@ const LeadCheckout = () => {
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="container mx-auto flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-2 font-semibold tracking-tight">
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded bg-blue-600 text-sm font-bold text-white">
-              LR
-            </span>
-            <span className="text-lg font-bold text-blue-950">Lead Rápido</span>
+          <div className="flex items-center">
+            <img
+              src="/logo-horizontal.png"
+              alt="Lead Rápido"
+              className="h-12 w-auto object-contain sm:h-14"
+            />
           </div>
           <div className="flex items-center gap-2">
             {DEMO_URL ? (
@@ -753,7 +783,7 @@ const LeadCheckout = () => {
               </button>
             </div>
 
-            <div className="checkout-modal-scroll min-h-0 flex-1 overflow-y-auto p-8">
+            <div ref={checkoutModalScrollRef} className="checkout-modal-scroll min-h-0 flex-1 overflow-y-auto p-8">
               {error ? (
                 <div className="mb-6 rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
                   ⚠️ {error}
@@ -1016,7 +1046,7 @@ const LeadCheckout = () => {
                           placeholder="0000 0000 0000 0000"
                           inputMode="numeric"
                           autoComplete="cc-number"
-                          maxLength={23}
+                          maxLength={19}
                           required
                         />
                       </div>
@@ -1116,26 +1146,11 @@ const LeadCheckout = () => {
               </form>
 
               {invoiceUrl || pixQrCodeImage || pixCopyPaste ? (
-                <div className="mt-8 rounded-[32px] border-2 border-dashed border-blue-200 bg-blue-50/30 p-6 text-center animate-in fade-in duration-200">
+                <div
+                  ref={pixSectionRef}
+                  className="mt-8 rounded-[32px] border-2 border-dashed border-blue-200 bg-blue-50/30 p-6 text-center animate-in fade-in duration-200"
+                >
                   <h4 className="mb-4 font-black text-blue-900">Finalize o seu PIX</h4>
-                  <div className="mb-4 flex flex-col items-stretch gap-3 sm:flex-row sm:justify-center">
-                    {invoiceUrl ? (
-                      <Button asChild variant="outline" className="border-blue-200 bg-white">
-                        <a href={invoiceUrl} target="_blank" rel="noreferrer">
-                          Abrir cobrança
-                        </a>
-                      </Button>
-                    ) : null}
-                    {paymentId ? (
-                      <Button
-                        type="button"
-                        className="bg-blue-600 text-white hover:bg-blue-700"
-                        onClick={checkPayment}
-                      >
-                        Verificar status do pagamento
-                      </Button>
-                    ) : null}
-                  </div>
                   {pixQrCodeImage ? (
                     <img
                       src={pixQrCodeImage}
@@ -1160,7 +1175,7 @@ const LeadCheckout = () => {
                       </Button>
                     </div>
                   ) : null}
-                  <p className="text-[10px] font-medium text-blue-600">
+                  <p className="text-sm font-medium text-blue-600">
                     Os leads serão enviados para <b>{form.buyerEmail}</b> após a confirmação.
                   </p>
                 </div>
