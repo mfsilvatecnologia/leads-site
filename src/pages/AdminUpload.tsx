@@ -5,8 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
+import { apiRequest, getSupportRequestId, toUserMessage } from '@/lib/apiClient';
 
 const AdminUpload = () => {
   const [adminToken, setAdminToken] = useState('');
@@ -15,9 +14,11 @@ const AdminUpload = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [errorSupportId, setErrorSupportId] = useState<string | null>(null);
 
   const handleUpload = async () => {
     setError('');
+    setErrorSupportId(null);
     setMessage('');
     if (!adminToken.trim()) {
       setError('Informe o token admin.');
@@ -31,7 +32,9 @@ const AdminUpload = () => {
     setLoading(true);
     try {
       const csvContent = await file.text();
-      const response = await fetch(`${API_BASE_URL}/public-leads/admin/upload-staging`, {
+      const data = await apiRequest<{ success: boolean; insertedRows?: number }>(
+        '/public-leads/admin/upload-staging',
+        {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -42,14 +45,12 @@ const AdminUpload = () => {
           delimiter,
           fileName: file.name,
         }),
-      });
-      const data = await response.json();
-      if (!data.success) {
-        throw new Error(data.message || 'Falha no upload');
       }
+      );
       setMessage(`Upload concluído: ${data.insertedRows} linhas inseridas em leadrapido_staging.`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao enviar CSV');
+      setError(toUserMessage(err));
+      setErrorSupportId(getSupportRequestId(err));
     } finally {
       setLoading(false);
     }
@@ -79,7 +80,14 @@ const AdminUpload = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
-            {error ? <div className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">{error}</div> : null}
+            {error ? (
+              <div className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">
+                {error}
+                {errorSupportId ? (
+                  <div className="mt-1 text-xs text-red-300">Codigo de suporte: {errorSupportId}</div>
+                ) : null}
+              </div>
+            ) : null}
             {message ? (
               <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-200">
                 {message}

@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
+import { apiRequest, getSupportRequestId, toUserMessage } from '@/lib/apiClient';
 const DEMO_URL = import.meta.env.VITE_DEMO_URL || '';
 const LEAD_UNIT_PRICE = 0.01;
 
@@ -17,6 +17,7 @@ const LeadCheckout = () => {
   const [loadingCatalog, setLoadingCatalog] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [errorSupportId, setErrorSupportId] = useState<string | null>(null);
   const [paymentId, setPaymentId] = useState('');
   const [invoiceUrl, setInvoiceUrl] = useState('');
   const [pixCopyPaste, setPixCopyPaste] = useState('');
@@ -59,16 +60,15 @@ const LeadCheckout = () => {
   useEffect(() => {
     const loadCatalog = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/public-leads/catalog`);
-        const data = await res.json();
-        if (!data.success) throw new Error(data.message || 'Erro ao carregar catálogo');
+        const data = await apiRequest<{ success: boolean; states: CatalogState[] }>('/public-leads/catalog');
         const loadedStates: CatalogState[] = data.states || [];
         setCatalog(loadedStates);
         if (loadedStates.length > 0) {
           setForm((prev) => ({ ...prev, state: loadedStates[0].state }));
         }
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Erro ao carregar catálogo');
+        setError(toUserMessage(e));
+        setErrorSupportId(getSupportRequestId(e));
       } finally {
         setLoadingCatalog(false);
       }
@@ -175,13 +175,11 @@ const LeadCheckout = () => {
       }
       setQuoteLoading(true);
       try {
-        const res = await fetch(
-          `${API_BASE_URL}/public-leads/quote?state=${encodeURIComponent(form.state)}&segment=${encodeURIComponent(
+        const data = await apiRequest<{ success: boolean; availableCount?: number; discountAmount?: number }>(
+          `/public-leads/quote?state=${encodeURIComponent(form.state)}&segment=${encodeURIComponent(
             form.segment
           )}${couponApplied ? `&couponCode=${encodeURIComponent(couponApplied)}` : ''}`
         );
-        const data = await res.json();
-        if (!data.success) throw new Error(data.message || 'Erro ao calcular');
         setAvailableCount(typeof data.availableCount === 'number' ? data.availableCount : null);
         setDiscountAmount(Number(data.discountAmount || 0));
         // Ao escolher estado+segmento, default = quantidade total disponível (valor completo)
@@ -201,6 +199,7 @@ const LeadCheckout = () => {
 
   const applyCoupon = async () => {
     setError('');
+    setErrorSupportId(null);
     const normalized = couponCode.trim().toUpperCase();
     if (!normalized) {
       setCouponApplied('');
@@ -208,25 +207,25 @@ const LeadCheckout = () => {
       return;
     }
     try {
-      const res = await fetch(
-        `${API_BASE_URL}/public-leads/quote?state=${encodeURIComponent(
+      const data = await apiRequest<{ success: boolean; discountAmount?: number }>(
+        `/public-leads/quote?state=${encodeURIComponent(
           form.state
         )}&segment=${encodeURIComponent(form.segment)}&couponCode=${encodeURIComponent(normalized)}`
       );
-      const data = await res.json();
-      if (!data.success) throw new Error(data.message || 'Cupom inválido');
       setCouponApplied(normalized);
       setDiscountAmount(Number(data.discountAmount || 0));
       setStatusMessage(`Cupom ${normalized} aplicado com sucesso.`);
     } catch (err) {
       setCouponApplied('');
       setDiscountAmount(0);
-      setError(err instanceof Error ? err.message : 'Erro ao validar cupom');
+      setError(toUserMessage(err));
+      setErrorSupportId(getSupportRequestId(err));
     }
   };
 
   const openCheckout = () => {
     setError('');
+    setErrorSupportId(null);
     setStatusMessage('');
     setPaymentId('');
     setInvoiceUrl('');
@@ -238,6 +237,7 @@ const LeadCheckout = () => {
   const handleCreateCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setErrorSupportId(null);
     setStatusMessage('');
     setSubmitting(true);
     setPaymentId('');
@@ -321,13 +321,17 @@ const LeadCheckout = () => {
         };
       }
 
-      const response = await fetch(`${API_BASE_URL}/public-leads/create-checkout`, {
+      const data = await apiRequest<{
+        success: boolean;
+        paymentId?: string;
+        invoiceUrl?: string;
+        paymentStatus?: string;
+        pix?: { copyPaste?: string; qrCodeImage?: string };
+      }>('/public-leads/create-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      const data = await response.json();
-      if (!data.success) throw new Error(data.message || 'Falha ao criar checkout');
 
       setPaymentId(data.paymentId || '');
       setInvoiceUrl(data.invoiceUrl || '');
@@ -341,7 +345,8 @@ const LeadCheckout = () => {
 
       setStatusMessage('Checkout criado. Finalize o pagamento para receber os leads por e-mail.');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao criar checkout');
+      setError(toUserMessage(err));
+      setErrorSupportId(getSupportRequestId(err));
     } finally {
       setSubmitting(false);
     }
@@ -350,19 +355,19 @@ const LeadCheckout = () => {
   const checkPayment = async () => {
     if (!paymentId) return;
     setError('');
+    setErrorSupportId(null);
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/public-leads/payment-status?paymentId=${encodeURIComponent(paymentId)}`
+      const data = await apiRequest<{ success: boolean; paid: boolean; status?: string }>(
+        `/public-leads/payment-status?paymentId=${encodeURIComponent(paymentId)}`
       );
-      const data = await response.json();
-      if (!data.success) throw new Error(data.message || 'Erro ao consultar pagamento');
       if (data.paid) {
         navigate('/obrigado');
       } else {
         setStatusMessage(`Status do pagamento: ${data.status}`);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao consultar pagamento');
+      setError(toUserMessage(err));
+      setErrorSupportId(getSupportRequestId(err));
     }
   };
 
@@ -441,6 +446,9 @@ const LeadCheckout = () => {
                 {error ? (
                   <div className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-700">
                     {error}
+                    {errorSupportId ? (
+                      <div className="mt-1 text-xs text-red-500">Codigo de suporte: {errorSupportId}</div>
+                    ) : null}
                   </div>
                 ) : null}
 
@@ -749,6 +757,9 @@ const LeadCheckout = () => {
               {error ? (
                 <div className="mb-6 rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
                   ⚠️ {error}
+                  {errorSupportId ? (
+                    <div className="mt-1 text-xs text-red-500">Codigo de suporte: {errorSupportId}</div>
+                  ) : null}
                 </div>
               ) : null}
 

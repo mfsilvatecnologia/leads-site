@@ -1,5 +1,32 @@
 const fs = require('fs');
 const path = require('path');
+const { randomUUID } = require('crypto');
+
+function getRequestId(event) {
+  const incoming = event?.headers?.['x-request-id'] || event?.headers?.['X-Request-Id'];
+  if (incoming && String(incoming).trim()) return String(incoming).trim();
+  return randomUUID();
+}
+
+function errorResponse(statusCode, requestId, code, message, details) {
+  const isDevelopment = process.env.NODE_ENV !== 'production';
+  return {
+    statusCode,
+    headers: {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+      "x-request-id": requestId,
+    },
+    body: JSON.stringify({
+      success: false,
+      code,
+      message,
+      requestId,
+      timestamp: new Date().toISOString(),
+      ...(isDevelopment && details ? { details } : {}),
+    }),
+  };
+}
 
 // Função para calcular similaridade de cosseno
 function cosineSimilarity(vecA, vecB) {
@@ -30,12 +57,11 @@ function loadVectors() {
 
 // Endpoint para pesquisa semântica
 exports.handler = async (event, context) => {
+  const requestId = getRequestId(event);
+
   // Verifica se é uma requisição POST
   if (event.httpMethod !== "POST") {
-    return {
-      statusCode: 405,
-      body: JSON.stringify({ error: "Método não permitido" })
-    };
+    return errorResponse(405, requestId, "METHOD_NOT_ALLOWED", "Método não permitido");
   }
 
   try {
@@ -43,10 +69,7 @@ exports.handler = async (event, context) => {
     const { query, vector, limit = 3 } = JSON.parse(event.body);
     
     if (!query && !vector) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: "É necessário fornecer 'query' ou 'vector'" })
-      };
+      return errorResponse(400, requestId, "MISSING_QUERY_OR_VECTOR", "É necessário fornecer 'query' ou 'vector'");
     }
     
     let queryVector;
@@ -56,10 +79,7 @@ exports.handler = async (event, context) => {
       const openaiApiKey = process.env.OPENAI_API_KEY;
       
       if (!openaiApiKey) {
-        return {
-          statusCode: 500,
-          body: JSON.stringify({ error: "API key não configurada" })
-        };
+        return errorResponse(500, requestId, "OPENAI_KEY_NOT_CONFIGURED", "Serviço temporariamente indisponível");
       }
       
       // Gerar embedding via OpenAI
@@ -100,17 +120,23 @@ exports.handler = async (event, context) => {
       statusCode: 200,
       headers: {
         "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*"
+        "Access-Control-Allow-Origin": "*",
+        "x-request-id": requestId,
       },
       body: JSON.stringify({
+        success: true,
         results: topResults
       })
     };
     
   } catch (error) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: error.message })
-    };
+    console.error('semantic-search error', { requestId, error });
+    return errorResponse(
+      500,
+      requestId,
+      "INTERNAL_SERVER_ERROR",
+      "Internal server error",
+      error instanceof Error ? { message: error.message } : undefined
+    );
   }
 };

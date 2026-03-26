@@ -10,6 +10,31 @@ const EXTENSION_BASE64 = "UEsDBAoAAAAAABliIlsAAAAAAAAAAAAAAAAPABwAZGlzcGFyby1yYX
 
 
 export const handler = async (event, context) => {
+  const incomingRequestId = event?.headers?.['x-request-id'] || event?.headers?.['X-Request-Id'];
+  const requestId =
+    incomingRequestId && String(incomingRequestId).trim()
+      ? String(incomingRequestId).trim()
+      : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  const isDevelopment = process.env.NODE_ENV !== 'production';
+  const jsonHeaders = {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Secure-Request',
+    'x-request-id': requestId,
+  };
+  const errorResponse = (statusCode, code, message, details) => ({
+    statusCode,
+    headers: jsonHeaders,
+    body: JSON.stringify({
+      success: false,
+      code,
+      message,
+      requestId,
+      timestamp: new Date().toISOString(),
+      ...(isDevelopment && details ? { details } : {}),
+    }),
+  });
+
   // Handle CORS preflight requests
   if (event.httpMethod === 'OPTIONS') {
     return {
@@ -18,61 +43,44 @@ export const handler = async (event, context) => {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Headers': 'Content-Type, X-Secure-Request',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Max-Age': '86400'
+        'Access-Control-Max-Age': '86400',
+        'x-request-id': requestId,
       },
-      body: ''
+      body: '',
     };
   }
   
   // Only allow POST requests
   if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-      },
-      body: JSON.stringify({ message: 'Method Not Allowed' }),
-    };
+    return errorResponse(405, 'METHOD_NOT_ALLOWED', 'Method Not Allowed');
   }
 
   // Check for security header
   const secureHeader = event.headers['x-secure-request'];
   if (!secureHeader || secureHeader !== 'true') {
-    return {
-      statusCode: 403,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-      },
-      body: JSON.stringify({ message: 'Unauthorized access' }),
-    };
+    return errorResponse(403, 'ACCESS_DENIED', 'Unauthorized access');
   }
 
   try {
     // Return the static file data
     return {
       statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type, X-Secure-Request'
-      },
+      headers: jsonHeaders,
       body: JSON.stringify({
+        success: true,
+        requestId,
         fileData: EXTENSION_BASE64,
         fileName: 'extencao-disparo-rapido.zip',
-        fileType: 'application/zip'
+        fileType: 'application/zip',
       }),
     };
   } catch (error) {
-    console.error('Error:', error);
-    return {
-      statusCode: 500,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-      },
-      body: JSON.stringify({ 
-        message: 'Internal server error', 
-        error: error.message
-      }),
-    };
+    console.error('secure-download error', { requestId, error });
+    return errorResponse(
+      500,
+      'INTERNAL_SERVER_ERROR',
+      'Internal server error',
+      error instanceof Error ? { message: error.message } : undefined
+    );
   }
 }
