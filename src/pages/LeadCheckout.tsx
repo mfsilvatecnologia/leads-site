@@ -29,11 +29,15 @@ const LeadCheckout = () => {
   const [couponCode, setCouponCode] = useState('');
   const [couponApplied, setCouponApplied] = useState('');
   const [discountAmount, setDiscountAmount] = useState(0);
+  const [segmentDropdownOpen, setSegmentDropdownOpen] = useState(false);
+  const [stateDropdownOpen, setStateDropdownOpen] = useState(false);
   const [cepLookupLoading, setCepLookupLoading] = useState(false);
   const [cepLookupError, setCepLookupError] = useState('');
   const [cepResolved, setCepResolved] = useState(false);
   const checkoutModalScrollRef = useRef<HTMLDivElement | null>(null);
   const pixSectionRef = useRef<HTMLDivElement | null>(null);
+  const segmentDropdownRef = useRef<HTMLDivElement | null>(null);
+  const stateDropdownRef = useRef<HTMLDivElement | null>(null);
 
   const [form, setForm] = useState({
     buyerName: '',
@@ -66,7 +70,7 @@ const LeadCheckout = () => {
         const loadedStates: CatalogState[] = data.states || [];
         setCatalog(loadedStates);
         if (loadedStates.length > 0) {
-          setForm((prev) => ({ ...prev, state: loadedStates[0].state }));
+          setForm((prev) => ({ ...prev, state: loadedStates.map((item) => item.state).join(', ') }));
         }
       } catch (e) {
         setError(toUserMessage(e));
@@ -78,14 +82,40 @@ const LeadCheckout = () => {
     void loadCatalog();
   }, []);
 
-  const currentState = useMemo(
-    () => catalog.find((c) => c.state === form.state),
-    [catalog, form.state]
+  const selectedStates = useMemo(
+    () =>
+      form.state
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean),
+    [form.state]
   );
-  const selectedSegment = useMemo(
-    () => currentState?.segments.find((s) => s.segment === form.segment),
-    [currentState, form.segment]
+  const selectedSegments = useMemo(
+    () =>
+      form.segment
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean),
+    [form.segment]
   );
+  const availableStateNames = useMemo(() => catalog.map((item) => item.state), [catalog]);
+  const allStatesSelected = useMemo(
+    () => availableStateNames.length > 0 && selectedStates.length === availableStateNames.length,
+    [availableStateNames, selectedStates]
+  );
+  const availableSegments = useMemo(() => {
+    const segmentMap = new Map<string, Segment>();
+    for (const stateName of selectedStates) {
+      const stateEntry = catalog.find((c) => c.state === stateName);
+      if (!stateEntry) continue;
+      for (const segmentItem of stateEntry.segments) {
+        if (!segmentMap.has(segmentItem.segment)) {
+          segmentMap.set(segmentItem.segment, segmentItem);
+        }
+      }
+    }
+    return Array.from(segmentMap.values());
+  }, [catalog, selectedStates]);
 
   const grossAmount = useMemo(() => Number(form.quantity || 0) * LEAD_UNIT_PRICE, [form.quantity]);
   const chargedAmount = useMemo(() => Math.max(0, grossAmount - discountAmount), [grossAmount, discountAmount]);
@@ -224,6 +254,22 @@ const LeadCheckout = () => {
 
     pixSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [checkoutOpen, invoiceUrl, pixQrCodeImage, pixCopyPaste]);
+
+  useEffect(() => {
+    const onPointerDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+
+      if (segmentDropdownRef.current && !segmentDropdownRef.current.contains(target)) {
+        setSegmentDropdownOpen(false);
+      }
+      if (stateDropdownRef.current && !stateDropdownRef.current.contains(target)) {
+        setStateDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', onPointerDown);
+    return () => document.removeEventListener('mousedown', onPointerDown);
+  }, []);
 
   const applyCoupon = async () => {
     setError('');
@@ -445,7 +491,7 @@ const LeadCheckout = () => {
                   className="h-12 rounded-xl bg-white px-8 text-blue-900 hover:bg-slate-100"
                   onClick={() => document.getElementById('gerar')?.scrollIntoView({ behavior: 'smooth' })}
                 >
-                  Gerar minha lista
+                  Gerar lista demostração
                 </Button>
                 <div className="flex items-center rounded-xl border border-blue-300/50 bg-blue-500/30 px-6 py-3 text-sm font-semibold">
                   <span className="mr-3 inline-flex h-2 w-2 animate-pulse rounded-full bg-green-300" />
@@ -485,52 +531,112 @@ const LeadCheckout = () => {
                 <div className="grid gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="segment">Segmentos</Label>
-                    <select
-                      id="segment"
-                      className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60"
-                      value={form.segment}
-                      onChange={(e) => {
-                        setCouponApplied('');
-                        setDiscountAmount(0);
-                        setForm({ ...form, segment: e.target.value });
-                      }}
-                      required
-                      disabled={!form.state}
-                    >
-                      <option value="" disabled>
-                        Selecione os segmentos
-                      </option>
-                      {(currentState?.segments || []).map((s) => (
-                        <option key={s.segment} value={s.segment}>
-                          {s.segment}
-                        </option>
-                      ))}
-                    </select>
+                    <div ref={segmentDropdownRef} className="relative">
+                      <button
+                        id="segment"
+                        type="button"
+                        className="flex h-11 w-full items-center justify-between rounded-xl border border-slate-300 bg-white px-3 text-left text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                        onClick={() => setSegmentDropdownOpen((prev) => !prev)}
+                        disabled={!form.state}
+                      >
+                        <span className="truncate">
+                          {selectedSegments.length > 0
+                            ? selectedSegments.join(', ')
+                            : 'Selecione um ou mais segmentos'}
+                        </span>
+                        <span className="ml-2 text-xs text-slate-500">{segmentDropdownOpen ? '▲' : '▼'}</span>
+                      </button>
+
+                      {segmentDropdownOpen && selectedStates.length > 0 ? (
+                        <div className="absolute z-20 mt-2 max-h-56 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
+                          {availableSegments.map((s) => {
+                            const checked = selectedSegments.includes(s.segment);
+                            return (
+                              <label
+                                key={s.segment}
+                                className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm text-slate-800 hover:bg-blue-50"
+                              >
+                                <input
+                                  type="checkbox"
+                                  className="h-4 w-4 rounded border-slate-300 text-blue-600"
+                                  checked={checked}
+                                  onChange={(e) => {
+                                    setCouponApplied('');
+                                    setDiscountAmount(0);
+                                    const next = e.target.checked
+                                      ? [...selectedSegments, s.segment]
+                                      : selectedSegments.filter((item) => item !== s.segment);
+                                    setForm({ ...form, segment: next.join(', ') });
+                                  }}
+                                />
+                                <span>{s.segment}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="state">Estados</Label>
-                      <select
-                        id="state"
-                        className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60"
-                        value={form.state}
-                        onChange={(e) => {
-                          setCouponApplied('');
-                          setDiscountAmount(0);
-                          setForm({ ...form, state: e.target.value, segment: '' });
-                        }}
-                        required
-                      >
-                        <option value="" disabled>
-                          Selecione os estados
-                        </option>
-                        {(catalog || []).map((item) => (
-                          <option key={item.state} value={item.state}>
-                            {item.state}
-                          </option>
-                        ))}
-                      </select>
+                      <div ref={stateDropdownRef} className="relative">
+                        <button
+                          id="state"
+                          type="button"
+                          className="flex h-11 w-full items-center justify-between rounded-xl border border-slate-300 bg-white px-3 text-left text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60"
+                          onClick={() => setStateDropdownOpen((prev) => !prev)}
+                        >
+                          <span className="truncate">
+                            {selectedStates.length > 0 ? selectedStates.join(', ') : 'Selecione um ou mais estados'}
+                          </span>
+                          <span className="ml-2 text-xs text-slate-500">{stateDropdownOpen ? '▲' : '▼'}</span>
+                        </button>
+
+                        {stateDropdownOpen ? (
+                          <div className="absolute z-20 mt-2 max-h-56 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
+                            <label className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm font-semibold text-slate-800 hover:bg-blue-50">
+                              <input
+                                type="checkbox"
+                                className="h-4 w-4 rounded border-slate-300 text-blue-600"
+                                checked={allStatesSelected}
+                                onChange={(e) => {
+                                  setCouponApplied('');
+                                  setDiscountAmount(0);
+                                  const nextStates = e.target.checked ? availableStateNames : [];
+                                  setForm({ ...form, state: nextStates.join(', '), segment: '' });
+                                }}
+                              />
+                              <span>Todos</span>
+                            </label>
+                            {(catalog || []).map((item) => {
+                              const checked = selectedStates.includes(item.state);
+                              return (
+                                <label
+                                  key={item.state}
+                                  className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm text-slate-800 hover:bg-blue-50"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    className="h-4 w-4 rounded border-slate-300 text-blue-600"
+                                    checked={checked}
+                                    onChange={(e) => {
+                                      setCouponApplied('');
+                                      setDiscountAmount(0);
+                                      const nextStates = e.target.checked
+                                        ? [...selectedStates, item.state]
+                                        : selectedStates.filter((stateName) => stateName !== item.state);
+                                      setForm({ ...form, state: nextStates.join(', '), segment: '' });
+                                    }}
+                                  />
+                                  <span>{item.state}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        ) : null}
+                      </div>
                     </div>
 
                     <div className="space-y-2">
@@ -539,7 +645,7 @@ const LeadCheckout = () => {
                         id="quantity"
                         type="number"
                         min={1}
-                        max={availableCount ?? selectedSegment?.availableLeads ?? 999999}
+                        max={availableCount ?? 999999}
                         value={form.quantity}
                         onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })}
                         required
