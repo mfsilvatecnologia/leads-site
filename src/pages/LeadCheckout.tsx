@@ -652,7 +652,9 @@ const LeadCheckout = () => {
                         min={1}
                         max={availableCount ?? 999999}
                         value={form.quantity}
-                        onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })}
+                        onChange={() => undefined}
+                        readOnly
+                        disabled
                         required
                       />
                       <div className="text-xs text-slate-500">
