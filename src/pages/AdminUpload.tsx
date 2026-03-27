@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { UploadCloud, ShieldCheck, FileCheck2 } from 'lucide-react';
+import { UploadCloud, ShieldCheck, FileCheck2, DatabaseZap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,9 +12,43 @@ const AdminUpload = () => {
   const [file, setFile] = useState<File | null>(null);
   const [delimiter, setDelimiter] = useState(',');
   const [loading, setLoading] = useState(false);
+  const [promoting, setPromoting] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [errorSupportId, setErrorSupportId] = useState<string | null>(null);
+
+  const handlePromote = async () => {
+    setError('');
+    setErrorSupportId(null);
+    setMessage('');
+    if (!adminToken.trim()) {
+      setError('Informe o token admin.');
+      return;
+    }
+    setPromoting(true);
+    try {
+      const data = await apiRequest<{ success: boolean; promotedRows?: number; skippedRows?: number }>(
+        '/public-leads/admin/promote-staging',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-token': adminToken.trim(),
+          },
+        }
+      );
+      setMessage(
+        `Base atualizada: ${data.promotedRows} leads promovidos da staging para leadrapido` +
+          (data.skippedRows ? ` (${data.skippedRows} ignorados por falta de place_id)` : '') +
+          '.'
+      );
+    } catch (err) {
+      setError(toUserMessage(err));
+      setErrorSupportId(getSupportRequestId(err));
+    } finally {
+      setPromoting(false);
+    }
+  };
 
   const handleUpload = async () => {
     setError('');
@@ -137,8 +171,25 @@ const AdminUpload = () => {
               />
             </div>
 
-            <Button type="button" onClick={handleUpload} disabled={loading} className="h-11 w-full bg-emerald-500 text-slate-950 hover:bg-emerald-400">
+            <Button type="button" onClick={handleUpload} disabled={loading || promoting} className="h-11 w-full bg-emerald-500 text-slate-950 hover:bg-emerald-400">
               {loading ? 'Enviando...' : 'Enviar para leadrapido_staging'}
+            </Button>
+
+            <div className="relative flex items-center gap-3 py-1">
+              <div className="h-px flex-1 bg-white/10" />
+              <span className="text-xs text-slate-500">ou</span>
+              <div className="h-px flex-1 bg-white/10" />
+            </div>
+
+            <Button
+              type="button"
+              onClick={handlePromote}
+              disabled={loading || promoting}
+              variant="outline"
+              className="h-11 w-full border-indigo-500/40 bg-indigo-500/10 text-indigo-200 hover:bg-indigo-500/20 hover:text-indigo-100"
+            >
+              <DatabaseZap className="mr-2 h-4 w-4" />
+              {promoting ? 'Atualizando base...' : 'Atualizar base de leads'}
             </Button>
           </CardContent>
         </Card>

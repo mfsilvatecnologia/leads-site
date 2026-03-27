@@ -54,6 +54,7 @@ const LeadCheckout = () => {
     bairro: '',
     cidade: '',
     uf: '',
+    cidadeIbge: '',
     cardHolderName: '',
     cardNumber: '',
     cardExpiryMonth: '',
@@ -180,6 +181,7 @@ const LeadCheckout = () => {
           bairro: String(data.bairro || ''),
           cidade: String(data.localidade || ''),
           uf: String(data.uf || '').toUpperCase(),
+          cidadeIbge: String(data.ibge || ''),
         }));
         setCepResolved(true);
       } catch {
@@ -192,6 +194,7 @@ const LeadCheckout = () => {
           bairro: '',
           cidade: '',
           uf: '',
+          cidadeIbge: '',
         }));
       } finally {
         if (!cancelled) setCepLookupLoading(false);
@@ -210,6 +213,7 @@ const LeadCheckout = () => {
     const run = async () => {
       if (!form.state || !form.segment) {
         setAvailableCount(null);
+        setForm((prev) => ({ ...prev, quantity: 0 }));
         return;
       }
       setQuoteLoading(true);
@@ -383,6 +387,7 @@ const LeadCheckout = () => {
         bairro: form.bairro,
         cidade: form.cidade,
         uf: form.uf,
+        cidadeIbge: form.cidadeIbge,
         couponCode: couponApplied || undefined,
       };
 
@@ -482,8 +487,8 @@ const LeadCheckout = () => {
                 Melhores Leads de <span className="text-blue-100">Empresas e Negócios</span> do Brasil
               </h1>
               <p className="mt-6 max-w-xl text-lg text-blue-100">
-                Leads coletados diretamente do Google Meu Negócio através de Inteligência Artificial.
-                Inclui nome, endereço, telefone, site, e-mail, Facebook, LinkedIn e validação de WhatsApp.
+                Leads coletados e qualificados diretamente do Google Meu Negócio por meio de Inteligência Artificial.
+                Incluem nome, endereço, telefone e validação de WhatsApp, podendo conter também informações adicionais como site, e-mail, Facebook, LinkedIn, quando disponíveis.
               </p>
               <div className="mt-8 flex flex-wrap gap-4">
                 <Button
@@ -714,10 +719,16 @@ const LeadCheckout = () => {
                     ) : null}
                   </div>
 
+                  {availableCount === 0 && form.state && form.segment && !quoteLoading ? (
+                    <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-center text-sm font-medium text-red-600">
+                      Sem leads disponíveis para o filtro selecionado.
+                    </div>
+                  ) : null}
+
                   <Button
                     size="lg"
-                    className="h-12 rounded-xl bg-blue-600 text-white hover:bg-blue-700"
-                    disabled={loadingCatalog || !form.state || !form.segment || submitting}
+                    className="h-12 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:cursor-not-allowed"
+                    disabled={loadingCatalog || !form.state || !form.segment || submitting || quoteLoading || availableCount === 0}
                     onClick={openCheckout}
                   >
                     Comprar leads
@@ -761,10 +772,10 @@ const LeadCheckout = () => {
           <div className="space-y-4">
             <details className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <summary className="cursor-pointer list-none font-bold text-slate-800">
-                1. A base é atualizada?
+                1. A base de Leads é atualizada?
               </summary>
               <p className="mt-3 text-sm text-slate-600">
-                Sim. Nossa plataforma utiliza robôs com Inteligência Artificial que realizam varreduras
+                Sim. Nossa plataforma utiliza ferramentas de Inteligência Artificial que realizam varreduras
                 mensalmente para garantir os dados mais atualizados.
               </p>
             </details>
@@ -774,7 +785,8 @@ const LeadCheckout = () => {
               </summary>
               <p className="mt-3 text-sm text-slate-600">
                 Os dados são extraídos diretamente do Google Meu Negócio para garantir a maior precisão
-                possível. Não utilizamos bases do cartão CNPJ da Receita Federal.
+                possível. Não utilizamos bases do cartão CNPJ da Receita Federal, pois muitas das informações
+                disponíveis são do escritório de contabilidade e não da empresa.
               </p>
             </details>
             <details className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -862,8 +874,8 @@ const LeadCheckout = () => {
                 <span className="text-xl font-bold">Lead Rápido</span>
               </div>
               <p className="max-w-sm text-sm text-blue-100">
-                A maior plataforma de extração de dados do Google Meu Negócio, potencializando o
-                crescimento de empresas B2B em todo o Brasil.
+                A melhor plataforma de leads do Brasil.
+                Mais clientes. Mais vendas. Mais escala.
               </p>
               <div className="mt-4 space-y-1 text-xs text-blue-100/80">
                 <p className="font-bold uppercase text-white">M F SILVA TECNOLOGIA DA INFORMAÇÃO LTDA</p>
