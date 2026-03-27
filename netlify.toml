@@ -9,3 +9,8 @@
   from = "/images/logo-email.png"
   to = "/logo-horizontal.png"
   status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
