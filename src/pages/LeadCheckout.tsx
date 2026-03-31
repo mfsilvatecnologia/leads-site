@@ -487,9 +487,7 @@ const LeadCheckout = () => {
                 Melhores Leads de <span className="text-blue-100">Empresas e Negócios</span> do Brasil
               </h1>
               <p className="mt-6 max-w-xl text-lg text-blue-100">
-                Leads coletados e qualificados diretamente do Google Meu Negócio por meio de Inteligência Artificial.
-                Incluem nome, endereço, telefone e validação de WhatsApp, podendo conter também informações adicionais como site, e-mail, Facebook, LinkedIn, quando disponíveis.
-              </p>
+                Leads coletados e qualificados diretamente do Google Meu Negócio por meio de Inteligência Artificial.</p>
               <div className="mt-8 flex flex-wrap gap-4">
                 <Button
                   size="lg"
@@ -836,34 +834,30 @@ const LeadCheckout = () => {
               Soluções para potencializar marketing e gestão comercial.
             </p>
           </div>
-          <div className="grid gap-8 md:grid-cols-2">
-            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-6 shadow-sm">
-              <h3 className="text-xl font-bold text-slate-800">Disparo Rápido</h3>
+          <div className="grid gap-8 md:grid-cols-1">
+            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-6 text-center shadow-sm">
+              <div className="flex justify-center">
+                <img
+                  src="https://disparorapido.com.br/images/logo-email.png"
+                  alt="Logo Disparo Rápido"
+                  className="h-auto w-56 object-contain md:w-64"
+                  loading="lazy"
+                />
+              </div>
               <p className="mt-2 text-sm text-slate-500">
                 Envio em massa de mensagens via WhatsApp com praticidade.
               </p>
-              <a
-                href="https://www.disparorapido.com.br"
-                target="_blank"
-                rel="noreferrer"
-                className="mt-4 inline-flex items-center font-bold text-blue-600 hover:text-blue-700"
-              >
-                Acessar site
-              </a>
-            </div>
-            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-6 shadow-sm">
-              <h3 className="text-xl font-bold text-slate-800">Publix CRM</h3>
-              <p className="mt-2 text-sm text-slate-500">
-                CRM com IA para organizar leads e acelerar conversões.
-              </p>
-              <a
-                href="https://publix.ia.br"
-                target="_blank"
-                rel="noreferrer"
-                className="mt-4 inline-flex items-center font-bold text-blue-600 hover:text-blue-700"
-              >
-                Acessar site
-              </a>
+              <div className="mt-4 flex justify-center">
+                <a
+                  href="https://www.disparorapido.com.br"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="relative inline-flex items-center justify-center rounded-xl bg-[#07b42f] px-6 py-3 text-sm font-extrabold text-white shadow-sm transition hover:bg-[#069e29] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#07b42f] focus-visible:ring-offset-2"
+                >
+                  <span className="pointer-events-none absolute inset-0 -z-10 rounded-xl bg-[#07b42f]/35 blur-sm animate-pulse motion-reduce:animate-none" />
+                  Acessar site
+                </a>
+              </div>
             </div>
           </div>
         </section>
