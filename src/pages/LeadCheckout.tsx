@@ -11,6 +11,31 @@ const LEAD_UNIT_PRICE = 0.01;
 type Segment = { segment: string; availableLeads: number };
 type CatalogState = { state: string; segments: Segment[] };
 
+function segmentNamesAvailableForStates(catalog: CatalogState[], stateNames: string[]): Set<string> {
+  const names = new Set<string>();
+  for (const stateName of stateNames) {
+    const stateEntry = catalog.find((c) => c.state === stateName);
+    if (!stateEntry) continue;
+    for (const seg of stateEntry.segments) {
+      names.add(seg.segment);
+    }
+  }
+  return names;
+}
+
+function preserveSegmentFieldForStates(
+  catalog: CatalogState[],
+  stateNames: string[],
+  currentSegmentCsv: string
+): string {
+  const available = segmentNamesAvailableForStates(catalog, stateNames);
+  return currentSegmentCsv
+    .split(',')
+    .map((item) => item.trim())
+    .filter((s) => s && available.has(s))
+    .join(', ');
+}
+
 const LeadCheckout = () => {
   const navigate = useNavigate();
   const [catalog, setCatalog] = useState<CatalogState[]>([]);
@@ -70,9 +95,6 @@ const LeadCheckout = () => {
         const data = await apiRequest<{ success: boolean; states: CatalogState[] }>('/public-leads/catalog');
         const loadedStates: CatalogState[] = data.states || [];
         setCatalog(loadedStates);
-        if (loadedStates.length > 0) {
-          setForm((prev) => ({ ...prev, state: loadedStates.map((item) => item.state).join(', ') }));
-        }
       } catch (e) {
         setError(toUserMessage(e));
         setErrorSupportId(getSupportRequestId(e));
@@ -608,7 +630,11 @@ const LeadCheckout = () => {
                                   setCouponApplied('');
                                   setDiscountAmount(0);
                                   const nextStates = e.target.checked ? availableStateNames : [];
-                                  setForm({ ...form, state: nextStates.join(', '), segment: '' });
+                                  setForm({
+                                    ...form,
+                                    state: nextStates.join(', '),
+                                    segment: preserveSegmentFieldForStates(catalog, nextStates, form.segment),
+                                  });
                                 }}
                               />
                               <span>Todos</span>
@@ -630,7 +656,11 @@ const LeadCheckout = () => {
                                       const nextStates = e.target.checked
                                         ? [...selectedStates, item.state]
                                         : selectedStates.filter((stateName) => stateName !== item.state);
-                                      setForm({ ...form, state: nextStates.join(', '), segment: '' });
+                                      setForm({
+                                        ...form,
+                                        state: nextStates.join(', '),
+                                        segment: preserveSegmentFieldForStates(catalog, nextStates, form.segment),
+                                      });
                                     }}
                                   />
                                   <span>{item.state}</span>
