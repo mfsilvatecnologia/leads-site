@@ -9,7 +9,7 @@ import { apiRequest, getSupportRequestId, toUserMessage } from '@/lib/apiClient'
 
 const AdminUpload = () => {
   const [adminToken, setAdminToken] = useState('');
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [delimiter, setDelimiter] = useState(',');
   const [loading, setLoading] = useState(false);
   const [promoting, setPromoting] = useState(false);
@@ -58,30 +58,43 @@ const AdminUpload = () => {
       setError('Informe o token admin.');
       return;
     }
-    if (!file) {
-      setError('Selecione um arquivo CSV.');
+    if (files.length === 0) {
+      setError('Selecione um ou mais arquivos CSV.');
       return;
     }
 
     setLoading(true);
     try {
-      const csvContent = await file.text();
-      const data = await apiRequest<{ success: boolean; insertedRows?: number }>(
-        '/public-leads/admin/upload-staging',
-        {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-admin-token': adminToken.trim(),
-        },
-        body: JSON.stringify({
-          csvContent,
-          delimiter,
-          fileName: file.name,
-        }),
+      let totalInserted = 0;
+      const perFile: Array<{ fileName: string; insertedRows: number }> = [];
+
+      for (const file of files) {
+        const csvContent = await file.text();
+        const data = await apiRequest<{ success: boolean; insertedRows?: number }>(
+          '/public-leads/admin/upload-staging',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-admin-token': adminToken.trim(),
+            },
+            body: JSON.stringify({
+              csvContent,
+              delimiter,
+              fileName: file.name,
+            }),
+          }
+        );
+
+        const insertedRows = Number(data.insertedRows || 0);
+        totalInserted += insertedRows;
+        perFile.push({ fileName: file.name, insertedRows });
       }
+
+      setMessage(
+        `Upload concluído: ${totalInserted} linhas inseridas em leadrapido_staging.\n` +
+          perFile.map((f) => `- ${f.fileName}: ${f.insertedRows}`).join('\n')
       );
-      setMessage(`Upload concluído: ${data.insertedRows} linhas inseridas em leadrapido_staging.`);
     } catch (err) {
       setError(toUserMessage(err));
       setErrorSupportId(getSupportRequestId(err));
@@ -167,8 +180,41 @@ const AdminUpload = () => {
                 id="csvFile"
                 type="file"
                 accept=".csv,text/csv"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                multiple
+                onChange={(e) => setFiles(Array.from(e.target.files || []))}
               />
+              {files.length > 0 ? (
+                <div className="space-y-2 rounded-xl border border-white/10 bg-slate-900/60 p-3 text-xs text-slate-300">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-semibold text-slate-200">{files.length} arquivo(s) selecionado(s)</span>
+                    <button
+                      type="button"
+                      className="text-slate-300 underline underline-offset-2 hover:text-white disabled:opacity-50"
+                      onClick={() => setFiles([])}
+                      disabled={loading || promoting}
+                    >
+                      Limpar
+                    </button>
+                  </div>
+                  <ul className="space-y-1">
+                    {files.map((f) => (
+                      <li key={`${f.name}-${f.size}-${f.lastModified}`} className="flex items-center justify-between gap-3">
+                        <span className="truncate">{f.name}</span>
+                        <button
+                          type="button"
+                          className="shrink-0 text-slate-300 underline underline-offset-2 hover:text-white disabled:opacity-50"
+                          onClick={() =>
+                            setFiles((prev) => prev.filter((p) => !(p.name === f.name && p.size === f.size && p.lastModified === f.lastModified)))
+                          }
+                          disabled={loading || promoting}
+                        >
+                          Remover
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
             </div>
 
             <Button type="button" onClick={handleUpload} disabled={loading || promoting} className="h-11 w-full bg-emerald-500 text-slate-950 hover:bg-emerald-400">

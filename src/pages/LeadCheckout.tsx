@@ -11,6 +11,16 @@ const LEAD_UNIT_PRICE = 0.01;
 type Segment = { segment: string; availableLeads: number };
 type CatalogState = { state: string; segments: Segment[] };
 
+function stateNamesAvailableForSegments(catalog: CatalogState[], segmentNames: string[]): Set<string> {
+  const names = new Set<string>();
+  for (const entry of catalog) {
+    if (entry.segments.some((s) => segmentNames.includes(s.segment))) {
+      names.add(entry.state);
+    }
+  }
+  return names;
+}
+
 function segmentNamesAvailableForStates(catalog: CatalogState[], stateNames: string[]): Set<string> {
   const names = new Set<string>();
   for (const stateName of stateNames) {
@@ -30,6 +40,19 @@ function preserveSegmentFieldForStates(
 ): string {
   const available = segmentNamesAvailableForStates(catalog, stateNames);
   return currentSegmentCsv
+    .split(',')
+    .map((item) => item.trim())
+    .filter((s) => s && available.has(s))
+    .join(', ');
+}
+
+function preserveStateFieldForSegments(
+  catalog: CatalogState[],
+  segmentNames: string[],
+  currentStateCsv: string
+): string {
+  const available = stateNamesAvailableForSegments(catalog, segmentNames);
+  return currentStateCsv
     .split(',')
     .map((item) => item.trim())
     .filter((s) => s && available.has(s))
@@ -126,19 +149,36 @@ const LeadCheckout = () => {
     () => availableStateNames.length > 0 && selectedStates.length === availableStateNames.length,
     [availableStateNames, selectedStates]
   );
+  const availableStates = useMemo(() => {
+    if (selectedSegments.length === 0) return catalog;
+    return catalog.filter((entry) => entry.segments.some((s) => selectedSegments.includes(s.segment)));
+  }, [catalog, selectedSegments]);
   const availableSegments = useMemo(() => {
     const segmentMap = new Map<string, Segment>();
-    for (const stateName of selectedStates) {
-      const stateEntry = catalog.find((c) => c.state === stateName);
-      if (!stateEntry) continue;
-      for (const segmentItem of stateEntry.segments) {
+    const source = selectedStates.length > 0 ? catalog.filter((c) => selectedStates.includes(c.state)) : catalog;
+    for (const stateEntry of source) {
+      for (const segmentItem of stateEntry.segments || []) {
         if (!segmentMap.has(segmentItem.segment)) {
           segmentMap.set(segmentItem.segment, segmentItem);
         }
       }
     }
+    // Mantém segmentos já selecionados visíveis (mesmo se não existirem no recorte atual de estados),
+    // para o usuário poder revisar/desmarcar sem perder a seleção automaticamente.
+    for (const name of selectedSegments) {
+      if (segmentMap.has(name)) continue;
+      let found: Segment | null = null;
+      for (const entry of catalog) {
+        const match = entry.segments.find((s) => s.segment === name);
+        if (match) {
+          found = match;
+          break;
+        }
+      }
+      segmentMap.set(name, found ?? { segment: name, availableLeads: 0 });
+    }
     return Array.from(segmentMap.values());
-  }, [catalog, selectedStates]);
+  }, [catalog, selectedStates, selectedSegments]);
 
   const grossAmount = useMemo(() => Number(form.quantity || 0) * LEAD_UNIT_PRICE, [form.quantity]);
   const chargedAmount = useMemo(() => Math.max(0, grossAmount - discountAmount), [grossAmount, discountAmount]);
@@ -562,7 +602,6 @@ const LeadCheckout = () => {
                         type="button"
                         className="flex h-11 w-full items-center justify-between rounded-xl border border-slate-300 bg-white px-3 text-left text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                         onClick={() => setSegmentDropdownOpen((prev) => !prev)}
-                        disabled={!form.state}
                       >
                         <span className="truncate">
                           {selectedSegments.length > 0
@@ -572,7 +611,7 @@ const LeadCheckout = () => {
                         <span className="ml-2 text-xs text-slate-500">{segmentDropdownOpen ? '▲' : '▼'}</span>
                       </button>
 
-                      {segmentDropdownOpen && selectedStates.length > 0 ? (
+                      {segmentDropdownOpen ? (
                         <div className="absolute z-20 mt-2 max-h-56 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
                           {availableSegments.map((s) => {
                             const checked = selectedSegments.includes(s.segment);
@@ -591,7 +630,11 @@ const LeadCheckout = () => {
                                     const next = e.target.checked
                                       ? [...selectedSegments, s.segment]
                                       : selectedSegments.filter((item) => item !== s.segment);
-                                    setForm({ ...form, segment: next.join(', ') });
+                                    setForm({
+                                      ...form,
+                                      segment: next.join(', '),
+                                      state: preserveStateFieldForSegments(catalog, next, form.state),
+                                    });
                                   }}
                                 />
                                 <span>{s.segment}</span>
@@ -633,13 +676,12 @@ const LeadCheckout = () => {
                                   setForm({
                                     ...form,
                                     state: nextStates.join(', '),
-                                    segment: preserveSegmentFieldForStates(catalog, nextStates, form.segment),
                                   });
                                 }}
                               />
                               <span>Todos</span>
                             </label>
-                            {(catalog || []).map((item) => {
+                            {(availableStates || []).map((item) => {
                               const checked = selectedStates.includes(item.state);
                               return (
                                 <label
@@ -659,7 +701,6 @@ const LeadCheckout = () => {
                                       setForm({
                                         ...form,
                                         state: nextStates.join(', '),
-                                        segment: preserveSegmentFieldForStates(catalog, nextStates, form.segment),
                                       });
                                     }}
                                   />
