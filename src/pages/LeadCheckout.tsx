@@ -1,15 +1,70 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { apiRequest, getSupportRequestId, toUserMessage } from '@/lib/apiClient';
+import { taxIdDigitsOnly, validateCheckoutTaxIdClient, type BuyerKind } from '@/lib/taxId';
+import { AmericanExpressFlatRoundedIcon } from 'react-svg-credit-card-payment-icons/americanexpress';
+import { EloFlatRoundedIcon } from 'react-svg-credit-card-payment-icons/elo';
+import { MastercardFlatRoundedIcon } from 'react-svg-credit-card-payment-icons/mastercard';
+import { VisaFlatRoundedIcon } from 'react-svg-credit-card-payment-icons/visa';
 const DEMO_URL = import.meta.env.VITE_DEMO_URL || '';
 const LEAD_UNIT_PRICE = 0.01;
 
 type Segment = { segment: string; availableLeads: number };
 type CatalogState = { state: string; segments: Segment[] };
+
+type CardSchemeForIcon = 'Visa' | 'Mastercard' | 'AmericanExpress' | 'Elo' | 'Generic';
+
+const cardSchemeIconProps = {
+  width: 44,
+  height: 28,
+  className: 'shrink-0',
+  'aria-hidden': true as const,
+};
+
+function cardSchemeFromNumber(cardNumber: string): CardSchemeForIcon {
+  const digits = cardNumber.replace(/\D/g, '');
+  if (!digits) return 'Generic';
+  if (/^4/.test(digits)) return 'Visa';
+  if (/^5[1-5]/.test(digits) || /^2[2-7]/.test(digits)) return 'Mastercard';
+  if (/^3[47]/.test(digits)) return 'AmericanExpress';
+  if (/^(4011|4312|4389|4514|4576|5041|5066|5067|5090|6277|6362|6363|6500|6504|6505|6516|6550|6551|6552)/.test(digits))
+    return 'Elo';
+  return 'Generic';
+}
+
+function CardSchemeFlatRoundedIcon({ scheme }: { scheme: CardSchemeForIcon }) {
+  switch (scheme) {
+    case 'Visa':
+      return <VisaFlatRoundedIcon {...cardSchemeIconProps} />;
+    case 'Mastercard':
+      return <MastercardFlatRoundedIcon {...cardSchemeIconProps} />;
+    case 'AmericanExpress':
+      return <AmericanExpressFlatRoundedIcon {...cardSchemeIconProps} />;
+    case 'Elo':
+      return <EloFlatRoundedIcon {...cardSchemeIconProps} />;
+    default:
+      return (
+        <svg
+          className="h-5 w-5 shrink-0 text-gray-400"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={1.5}
+          aria-hidden
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+          />
+        </svg>
+      );
+  }
+}
 
 function stateNamesAvailableForSegments(catalog: CatalogState[], segmentNames: string[]): Set<string> {
   const names = new Set<string>();
@@ -77,6 +132,7 @@ const LeadCheckout = () => {
   const [couponCode, setCouponCode] = useState('');
   const [couponApplied, setCouponApplied] = useState('');
   const [discountAmount, setDiscountAmount] = useState(0);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [segmentDropdownOpen, setSegmentDropdownOpen] = useState(false);
   const [stateDropdownOpen, setStateDropdownOpen] = useState(false);
   const [cepLookupLoading, setCepLookupLoading] = useState(false);
@@ -88,6 +144,7 @@ const LeadCheckout = () => {
   const stateDropdownRef = useRef<HTMLDivElement | null>(null);
 
   const [form, setForm] = useState({
+    buyerKind: 'PF' as BuyerKind,
     buyerName: '',
     buyerEmail: '',
     buyerWhatsapp: '',
@@ -182,6 +239,8 @@ const LeadCheckout = () => {
 
   const grossAmount = useMemo(() => Number(form.quantity || 0) * LEAD_UNIT_PRICE, [form.quantity]);
   const chargedAmount = useMemo(() => Math.max(0, grossAmount - discountAmount), [grossAmount, discountAmount]);
+
+  const cardSchemeForIcon = useMemo(() => cardSchemeFromNumber(form.cardNumber), [form.cardNumber]);
 
   const formatCardNumber = (value: string): string => {
     const digits = value.replace(/\D/g, '').slice(0, 16);
@@ -371,6 +430,8 @@ const LeadCheckout = () => {
     setInvoiceUrl('');
     setPixCopyPaste('');
     setPixQrCodeImage('');
+    setAcceptedTerms(false);
+    setForm((prev) => ({ ...prev, buyerKind: 'PF' }));
     setCheckoutOpen(true);
   };
 
@@ -386,8 +447,15 @@ const LeadCheckout = () => {
     setPixQrCodeImage('');
 
     try {
+      if (!acceptedTerms) {
+        throw new Error('Voce precisa aceitar os Termos de Uso para continuar.');
+      }
       if (couponCode && !couponApplied) {
         throw new Error('Clique em "Aplicar cupom" antes de pagar.');
+      }
+      const taxIdError = validateCheckoutTaxIdClient(form.cpfCnpj, form.buyerKind);
+      if (taxIdError) {
+        throw new Error(taxIdError);
       }
       if (form.paymentMethod === 'CREDIT_CARD') {
         const cardDigits = form.cardNumber.replace(/\D/g, '');
@@ -416,9 +484,6 @@ const LeadCheckout = () => {
         if (!/^\d{8}$/.test(form.cep.replace(/\D/g, ''))) {
           throw new Error('CEP inválido. Use 8 dígitos.');
         }
-        if (!form.cpfCnpj || form.cpfCnpj.replace(/\D/g, '').length < 11) {
-          throw new Error('CPF/CNPJ é obrigatório para pagamento com cartão.');
-        }
         if (!form.addressNumber.trim()) {
           throw new Error('Número do endereço é obrigatório para pagamento com cartão.');
         }
@@ -435,6 +500,7 @@ const LeadCheckout = () => {
       }
 
       const payload: Record<string, unknown> = {
+        buyerKind: form.buyerKind,
         buyerName: form.buyerName,
         buyerEmail: form.buyerEmail,
         buyerWhatsapp: form.buyerWhatsapp,
@@ -442,7 +508,7 @@ const LeadCheckout = () => {
         segment: form.segment,
         quantity: Number(form.quantity),
         paymentMethod: form.paymentMethod,
-        cpfCnpj: form.cpfCnpj,
+        cpfCnpj: taxIdDigitsOnly(form.cpfCnpj),
         cep: form.cep,
         addressNumber: form.addressNumber,
         endereco: form.endereco,
@@ -559,7 +625,7 @@ const LeadCheckout = () => {
                   Gerar lista demostração
                 </Button>
                 <div className="flex items-center rounded-xl border border-blue-300/50 bg-blue-500/30 px-6 py-3 text-sm font-semibold">
-                  <span className="mr-3 inline-flex h-2 w-2 animate-pulse rounded-full bg-green-300" />
+                  <span className="mr-3 inline-flex h-2 w-2 animate-pulse rounded-full bg-blue-300" />
                   Atualizado em {new Date().getFullYear()}
                 </div>
               </div>
@@ -759,7 +825,7 @@ const LeadCheckout = () => {
                           <span className="text-slate-600">
                             Desconto {couponApplied ? `(${couponApplied})` : ''}
                           </span>
-                          <span className="font-medium text-emerald-600">
+                          <span className="font-medium text-blue-600">
                             - R$ {discountAmount.toFixed(2).replace('.', ',')}
                           </span>
                         </div>
@@ -786,7 +852,7 @@ const LeadCheckout = () => {
                       </Button>
                     </div>
                     {couponApplied ? (
-                      <div className="mt-2 text-xs text-emerald-600">Cupom ativo: {couponApplied}</div>
+                      <div className="mt-2 text-xs text-blue-600">Cupom ativo: {couponApplied}</div>
                     ) : null}
                   </div>
 
@@ -969,7 +1035,16 @@ const LeadCheckout = () => {
             </div>
             <div className="text-sm md:text-right">
               <h4 className="mb-4 text-lg font-bold">Legal</h4>
-              <p className="text-blue-100">Políticas de Privacidade • Termos de Uso • LGPD</p>
+              <p className="text-blue-100">
+                <Link to="/politica-de-privacidade" className="underline-offset-4 hover:underline">
+                  Politica de Privacidade
+                </Link>{' '}
+                •{' '}
+                <Link to="/termos-de-uso" className="underline-offset-4 hover:underline">
+                  Termos de Uso
+                </Link>{' '}
+                • LGPD
+              </p>
               <p className="mt-6 text-xs text-blue-100/60">Copyright © 2026 Lead Rápido. Todos os direitos reservados.</p>
             </div>
           </div>
@@ -980,31 +1055,28 @@ const LeadCheckout = () => {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <button
             type="button"
-            className="absolute inset-0 bg-blue-950/40"
+            className="absolute inset-0 bg-blue-950/40 backdrop-blur-sm transition-opacity"
             aria-label="Fechar checkout"
             onClick={() => {
               if (!submitting) setCheckoutOpen(false);
             }}
           />
 
-          <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-[32px] bg-white text-gray-900 shadow-2xl animate-in fade-in duration-200">
-            <div className="flex shrink-0 items-center justify-between border-b border-gray-100 bg-gray-50/50 p-6">
-              <div>
-                <h3 className="text-xl font-black text-blue-950">Checkout Seguro</h3>
-                <p className="text-xs text-gray-500">Finalize a sua compra em 3 etapas rápidas</p>
-              </div>
+          <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-[24px] bg-white text-gray-900 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex shrink-0 items-center justify-between border-b border-gray-100 p-5 md:px-8 md:py-6">
+              <h3 className="text-xl font-extrabold tracking-tight text-blue-950">Finalize sua Compra</h3>
               <button
                 type="button"
                 onClick={() => {
                   if (!submitting) setCheckoutOpen(false);
                 }}
-                className="flex h-8 w-8 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-200"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-gray-200 hover:text-gray-700"
               >
                 ✕
               </button>
             </div>
 
-            <div ref={checkoutModalScrollRef} className="checkout-modal-scroll min-h-0 flex-1 overflow-y-auto p-8">
+            <div ref={checkoutModalScrollRef} className="checkout-modal-scroll min-h-0 flex-1 overflow-y-auto p-5 md:p-8">
               {error ? (
                 <div className="mb-6 rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
                   ⚠️ {error}
@@ -1015,57 +1087,94 @@ const LeadCheckout = () => {
               ) : null}
 
               {statusMessage ? (
-                <div className="mb-6 rounded-xl border border-emerald-100 bg-emerald-50 p-4 text-sm font-bold text-emerald-700">
+                <div className="mb-6 rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm font-bold text-blue-800">
                   ✓ {statusMessage}
                 </div>
               ) : null}
 
               <form onSubmit={handleCreateCheckout} className="space-y-8">
                 <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
-                      1
-                    </span>
-                    <h4 className="font-bold text-gray-800">Dados do Comprador</h4>
+                  <h4 className="border-b border-gray-100 pb-2 text-sm font-bold text-gray-800">Dados do Comprador</h4>
+                  <div className="flex rounded-xl bg-gray-100/80 p-1">
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, buyerKind: 'PF' })}
+                      className={`flex flex-1 items-center justify-center rounded-lg py-2.5 text-xs font-bold transition-all duration-200 ${
+                        form.buyerKind === 'PF'
+                          ? 'bg-white text-gray-900 shadow-sm ring-1 ring-black/5'
+                          : 'text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      Pessoa física
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, buyerKind: 'PJ' })}
+                      className={`flex flex-1 items-center justify-center rounded-lg py-2.5 text-xs font-bold transition-all duration-200 ${
+                        form.buyerKind === 'PJ'
+                          ? 'bg-white text-gray-900 shadow-sm ring-1 ring-black/5'
+                          : 'text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      Pessoa jurídica
+                    </button>
                   </div>
-                  <div className="grid gap-4 text-gray-900 md:grid-cols-2">
+                  <div className="grid gap-3 text-gray-900 md:grid-cols-2">
                     <div className="md:col-span-2">
-                      <label htmlFor="buyerNameModal" className="text-[10px] font-bold uppercase text-gray-400">
-                        Nome Completo
+                      <label htmlFor="buyerNameModal" className="text-xs font-semibold text-gray-600">
+                        {form.buyerKind === 'PF' ? 'Nome completo' : 'Razão social'}
                       </label>
                       <Input
                         id="buyerNameModal"
-                        className="mt-1 h-11 border-gray-200 bg-gray-50"
+                        className="mt-1 h-10 border-gray-200 bg-gray-50 shadow-none"
                         value={form.buyerName}
                         onChange={(e) => setForm({ ...form, buyerName: e.target.value })}
-                        placeholder="Seu nome completo"
+                        placeholder={
+                          form.buyerKind === 'PF' ? 'Nome Completo' : 'Razão social cadastrada na Receita'
+                        }
                         required
                       />
                     </div>
                     <div>
-                      <label htmlFor="buyerEmailModal" className="text-[10px] font-bold uppercase text-gray-400">
-                        E-mail
+                      <label htmlFor="cpfCnpjModal" className="text-xs font-semibold text-gray-600">
+                        {form.buyerKind === 'PF' ? 'CPF' : 'CNPJ'}
                       </label>
                       <Input
-                        id="buyerEmailModal"
-                        type="email"
-                        className="mt-1 h-11 border-gray-200 bg-gray-50"
-                        value={form.buyerEmail}
-                        onChange={(e) => setForm({ ...form, buyerEmail: e.target.value })}
-                        placeholder="voce@empresa.com"
+                        id="cpfCnpjModal"
+                        className="mt-1 h-10 border-gray-200 bg-gray-50 shadow-none"
+                        value={form.cpfCnpj}
+                        onChange={(e) => setForm({ ...form, cpfCnpj: e.target.value })}
+                        placeholder={form.buyerKind === 'PF' ? '11 dígitos' : '14 dígitos'}
+                        inputMode="numeric"
+                        autoComplete="off"
+                        maxLength={form.buyerKind === 'PF' ? 14 : 18}
                         required
                       />
                     </div>
                     <div>
-                      <label htmlFor="buyerWhatsappModal" className="text-[10px] font-bold uppercase text-gray-400">
+                      <label htmlFor="buyerWhatsappModal" className="text-xs font-semibold text-gray-600">
                         WhatsApp
                       </label>
                       <Input
                         id="buyerWhatsappModal"
-                        className="mt-1 h-11 border-gray-200 bg-gray-50"
+                        className="mt-1 h-10 border-gray-200 bg-gray-50 shadow-none"
                         value={form.buyerWhatsapp}
                         onChange={(e) => setForm({ ...form, buyerWhatsapp: e.target.value })}
                         placeholder="(11) 99999-9999"
+                        required
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label htmlFor="buyerEmailModal" className="text-xs font-semibold text-gray-600">
+                        E-mail de recebimento dos leads
+                      </label>
+                      <Input
+                        id="buyerEmailModal"
+                        type="email"
+                        className="mt-1 h-10 border-gray-200 bg-gray-50 shadow-none"
+                        value={form.buyerEmail}
+                        onChange={(e) => setForm({ ...form, buyerEmail: e.target.value })}
+                        placeholder="voce@empresa.com"
                         required
                       />
                     </div>
@@ -1073,34 +1182,15 @@ const LeadCheckout = () => {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
-                      2
-                    </span>
-                    <h4 className="font-bold text-gray-800">Endereço e Documento</h4>
-                  </div>
-                  <div className="grid grid-cols-1 gap-4 text-gray-900 sm:grid-cols-3">
-                    <div className="sm:col-span-3">
-                      <label htmlFor="cpfCnpjModal" className="text-[10px] font-bold uppercase text-gray-400">
-                        CPF ou CNPJ *
-                      </label>
-                      <Input
-                        id="cpfCnpjModal"
-                        className="mt-1 h-11 border-gray-200 bg-gray-50"
-                        value={form.cpfCnpj}
-                        onChange={(e) => setForm({ ...form, cpfCnpj: e.target.value })}
-                        placeholder="Somente números"
-                        required
-                      />
-                    </div>
-
+                  <h4 className="border-b border-gray-100 pb-2 text-sm font-bold text-gray-800">Endereço de Faturamento</h4>
+                  <div className="grid grid-cols-1 gap-3 text-gray-900 sm:grid-cols-3">
                     <div className="sm:col-span-2">
-                      <label htmlFor="cepModal" className="text-[10px] font-bold uppercase text-gray-400">
-                        CEP *
+                      <label htmlFor="cepModal" className="text-xs font-semibold text-gray-600">
+                        CEP
                       </label>
                       <Input
                         id="cepModal"
-                        className="mt-1 h-11 border-gray-200 bg-gray-50"
+                        className="mt-1 h-10 border-gray-200 bg-gray-50 shadow-none"
                         value={form.cep}
                         onChange={(e) => setForm({ ...form, cep: e.target.value })}
                         placeholder="00000-000"
@@ -1112,28 +1202,26 @@ const LeadCheckout = () => {
                         <p className="mt-1 text-[10px] text-red-600">{cepLookupError}</p>
                       ) : null}
                     </div>
-
                     <div className="sm:col-span-1">
-                      <label htmlFor="addressNumberModal" className="text-[10px] font-bold uppercase text-gray-400">
-                        Número *
+                      <label htmlFor="addressNumberModal" className="text-xs font-semibold text-gray-600">
+                        Número
                       </label>
                       <Input
                         id="addressNumberModal"
-                        className="mt-1 h-11 border-gray-200 bg-gray-50"
+                        className="mt-1 h-10 border-gray-200 bg-gray-50 shadow-none"
                         value={form.addressNumber}
                         onChange={(e) => setForm({ ...form, addressNumber: e.target.value })}
                         placeholder="123"
                         required
                       />
                     </div>
-
                     <div className="sm:col-span-3">
-                      <label htmlFor="enderecoModal" className="text-[10px] font-bold uppercase text-gray-400">
-                        Endereço *
+                      <label htmlFor="enderecoModal" className="text-xs font-semibold text-gray-600">
+                        Endereço
                       </label>
                       <Input
                         id="enderecoModal"
-                        className="mt-1 h-11 border-gray-200 bg-gray-50"
+                        className="mt-1 h-10 border-gray-200 bg-gray-50 shadow-none"
                         value={form.endereco}
                         onChange={(e) => setForm({ ...form, endereco: e.target.value })}
                         placeholder="Rua, Avenida..."
@@ -1141,14 +1229,13 @@ const LeadCheckout = () => {
                         readOnly={!cepResolved}
                       />
                     </div>
-
                     <div className="sm:col-span-2">
-                      <label htmlFor="bairroModal" className="text-[10px] font-bold uppercase text-gray-400">
-                        Bairro *
+                      <label htmlFor="bairroModal" className="text-xs font-semibold text-gray-600">
+                        Bairro
                       </label>
                       <Input
                         id="bairroModal"
-                        className="mt-1 h-11 border-gray-200 bg-gray-50"
+                        className="mt-1 h-10 border-gray-200 bg-gray-50 shadow-none"
                         value={form.bairro}
                         onChange={(e) => setForm({ ...form, bairro: e.target.value })}
                         placeholder="Bairro"
@@ -1156,14 +1243,13 @@ const LeadCheckout = () => {
                         readOnly={!cepResolved}
                       />
                     </div>
-
                     <div className="sm:col-span-1">
-                      <label htmlFor="ufModal" className="text-[10px] font-bold uppercase text-gray-400">
-                        UF *
+                      <label htmlFor="ufModal" className="text-xs font-semibold text-gray-600">
+                        UF
                       </label>
                       <Input
                         id="ufModal"
-                        className="mt-1 h-11 border-gray-200 bg-gray-50 uppercase"
+                        className="mt-1 h-10 border-gray-200 bg-gray-50 shadow-none uppercase"
                         value={form.uf}
                         onChange={(e) => setForm({ ...form, uf: e.target.value.toUpperCase().slice(0, 2) })}
                         placeholder="SP"
@@ -1172,14 +1258,13 @@ const LeadCheckout = () => {
                         readOnly={!cepResolved}
                       />
                     </div>
-
                     <div className="sm:col-span-3">
-                      <label htmlFor="cidadeModal" className="text-[10px] font-bold uppercase text-gray-400">
-                        Cidade *
+                      <label htmlFor="cidadeModal" className="text-xs font-semibold text-gray-600">
+                        Cidade
                       </label>
                       <Input
                         id="cidadeModal"
-                        className="mt-1 h-11 border-gray-200 bg-gray-50"
+                        className="mt-1 h-10 border-gray-200 bg-gray-50 shadow-none"
                         value={form.cidade}
                         onChange={(e) => setForm({ ...form, cidade: e.target.value })}
                         placeholder="Cidade"
@@ -1190,176 +1275,202 @@ const LeadCheckout = () => {
                   </div>
                 </div>
 
-                <div className="space-y-4 rounded-3xl border border-blue-100 bg-blue-50/50 p-6">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
-                        3
-                      </span>
-                      <h4 className="font-bold text-gray-800">Forma de Pagamento</h4>
-                    </div>
-                    <div className="flex gap-2">
-                      {(['PIX', 'CREDIT_CARD'] as const).map((m) => (
-                        <button
-                          key={m}
-                          type="button"
-                          onClick={() => setForm({ ...form, paymentMethod: m })}
-                          className={`rounded-lg px-4 py-2 text-xs font-bold transition ${
-                            form.paymentMethod === m
-                              ? 'bg-blue-600 text-white shadow-lg'
-                              : 'border border-gray-200 bg-white text-gray-500'
-                          }`}
-                        >
-                          {m === 'PIX' ? 'PIX' : 'Cartão de Crédito'}
-                        </button>
-                      ))}
-                    </div>
+                <div className="space-y-4 pt-4">
+                  <div className="border-b border-gray-100 pb-2">
+                    <h4 className="text-sm font-bold text-gray-800">Forma de Pagamento</h4>
                   </div>
 
-                  <div className="rounded-2xl border border-blue-100 bg-white/80 p-4 text-sm text-gray-800">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-gray-600">
-                        {form.segment} • {form.state}
-                      </span>
-                      <span className="font-semibold">{form.quantity} leads</span>
-                    </div>
-                    <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-gray-600">Total</span>
-                      <span className="text-base font-bold text-blue-900">
-                        R$ {chargedAmount.toFixed(2).replace('.', ',')}
-                      </span>
-                    </div>
-                    {discountAmount > 0 ? (
-                      <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
-                        <span className="text-gray-600">Desconto</span>
-                        <span className="font-semibold text-emerald-600">
-                          - R$ {discountAmount.toFixed(2).replace('.', ',')}
-                        </span>
-                      </div>
-                    ) : null}
+                  <div className="flex rounded-xl bg-gray-100/80 p-1">
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, paymentMethod: 'PIX' })}
+                      className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-3 text-xs font-bold transition-all duration-200 ${
+                        form.paymentMethod === 'PIX'
+                          ? 'bg-white text-gray-900 shadow-sm ring-1 ring-black/5'
+                          : 'text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      PIX
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, paymentMethod: 'CREDIT_CARD' })}
+                      className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-3 text-xs font-bold transition-all duration-200 ${
+                        form.paymentMethod === 'CREDIT_CARD'
+                          ? 'bg-white text-gray-900 shadow-sm ring-1 ring-black/5'
+                          : 'text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                        />
+                      </svg>
+                      Cartão de Crédito
+                    </button>
                   </div>
 
                   {form.paymentMethod === 'CREDIT_CARD' ? (
-                    <div className="grid grid-cols-1 gap-4 text-gray-900 animate-in fade-in duration-200 sm:grid-cols-4">
-                      <div className="sm:col-span-4">
-                        <label htmlFor="cardHolderNameModal" className="text-[10px] font-bold uppercase text-gray-400">
-                          Nome Impresso no Cartão
-                        </label>
-                        <Input
-                          id="cardHolderNameModal"
-                          className="mt-1 h-11 border-gray-200 bg-white uppercase"
-                          value={form.cardHolderName}
-                          onChange={(e) => setForm({ ...form, cardHolderName: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="sm:col-span-4">
-                        <label htmlFor="cardNumberModal" className="text-[10px] font-bold uppercase text-gray-400">
-                          Número do Cartão
-                        </label>
-                        <Input
-                          id="cardNumberModal"
-                          className="mt-1 h-11 border-gray-200 bg-white"
-                          value={form.cardNumber}
-                          onChange={(e) =>
-                            setForm({ ...form, cardNumber: formatCardNumber(e.target.value) })
-                          }
-                          placeholder="0000 0000 0000 0000"
-                          inputMode="numeric"
-                          autoComplete="cc-number"
-                          maxLength={19}
-                          required
-                        />
-                      </div>
-                      <div className="sm:col-span-2">
-                        <label className="text-[10px] font-bold uppercase text-gray-400">
-                          Validade (MM/AAAA)
-                        </label>
-                        <div className="mt-1 flex gap-2">
+                    <div className="rounded-2xl border border-gray-200 bg-white p-5 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+                        <div className="sm:col-span-4">
+                          <label htmlFor="cardHolderNameModal" className="text-xs font-semibold text-gray-600">
+                            Nome impresso no cartão
+                          </label>
                           <Input
-                            id="cardExpiryMonthModal"
-                            className="h-11 w-1/2 min-w-0 border-gray-200 bg-white text-center"
-                            placeholder="Mês"
-                            value={form.cardExpiryMonth}
-                            onChange={(e) =>
-                              setForm({
-                                ...form,
-                                cardExpiryMonth: e.target.value.replace(/\D/g, '').slice(0, 2),
-                              })
-                            }
-                            inputMode="numeric"
-                            autoComplete="cc-exp-month"
-                            maxLength={2}
+                            id="cardHolderNameModal"
+                            className="mt-1 h-11 border-gray-200 bg-gray-50 uppercase shadow-none focus:bg-white"
+                            value={form.cardHolderName}
+                            onChange={(e) => setForm({ ...form, cardHolderName: e.target.value })}
                             required
                           />
+                        </div>
+                        <div className="sm:col-span-4">
+                          <label htmlFor="cardNumberModal" className="text-xs font-semibold text-gray-600">
+                            Número do Cartão
+                          </label>
+                          <div className="relative mt-1">
+                            <div className="pointer-events-none absolute left-2.5 top-1/2 z-10 flex h-6 w-11 -translate-y-1/2 items-center justify-center [&_svg]:max-h-6 [&_svg]:max-w-full [&_svg]:object-contain">
+                              <CardSchemeFlatRoundedIcon scheme={cardSchemeForIcon} />
+                            </div>
+                            <Input
+                              id="cardNumberModal"
+                              className="h-11 border-gray-200 bg-gray-50 pl-[3.75rem] pr-3 shadow-none focus:bg-white"
+                              value={form.cardNumber}
+                              onChange={(e) => setForm({ ...form, cardNumber: formatCardNumber(e.target.value) })}
+                              placeholder="0000 0000 0000 0000"
+                              inputMode="numeric"
+                              autoComplete="cc-number"
+                              maxLength={19}
+                              required
+                            />
+                          </div>
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="text-xs font-semibold text-gray-600">Validade</label>
+                          <div className="mt-1 flex gap-2">
+                            <Input
+                              id="cardExpiryMonthModal"
+                              className="h-11 w-1/2 min-w-0 border-gray-200 bg-gray-50 text-center shadow-none focus:bg-white"
+                              placeholder="MM"
+                              value={form.cardExpiryMonth}
+                              onChange={(e) =>
+                                setForm({
+                                  ...form,
+                                  cardExpiryMonth: e.target.value.replace(/\D/g, '').slice(0, 2),
+                                })
+                              }
+                              inputMode="numeric"
+                              autoComplete="cc-exp-month"
+                              maxLength={2}
+                              required
+                            />
+                            <Input
+                              id="cardExpiryYearModal"
+                              className="h-11 w-1/2 min-w-0 border-gray-200 bg-gray-50 text-center shadow-none focus:bg-white"
+                              placeholder="AAAA"
+                              value={form.cardExpiryYear}
+                              onChange={(e) =>
+                                setForm({
+                                  ...form,
+                                  cardExpiryYear: e.target.value.replace(/\D/g, '').slice(0, 4),
+                                })
+                              }
+                              inputMode="numeric"
+                              autoComplete="cc-exp-year"
+                              maxLength={4}
+                              required
+                            />
+                          </div>
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label htmlFor="cardCvvModal" className="text-xs font-semibold text-gray-600">
+                            CVV
+                          </label>
                           <Input
-                            id="cardExpiryYearModal"
-                            className="h-11 w-1/2 min-w-0 border-gray-200 bg-white text-center"
-                            placeholder="Ano"
-                            value={form.cardExpiryYear}
+                            id="cardCvvModal"
+                            className="mt-1 h-11 border-gray-200 bg-gray-50 shadow-none focus:bg-white"
+                            value={form.cardCvv}
                             onChange={(e) =>
                               setForm({
                                 ...form,
-                                cardExpiryYear: e.target.value.replace(/\D/g, '').slice(0, 4),
+                                cardCvv: e.target.value.replace(/\D/g, '').slice(0, 4),
                               })
                             }
+                            placeholder="123"
                             inputMode="numeric"
-                            autoComplete="cc-exp-year"
+                            autoComplete="cc-csc"
                             maxLength={4}
                             required
                           />
                         </div>
                       </div>
-                      <div className="sm:col-span-2">
-                        <label htmlFor="cardCvvModal" className="text-[10px] font-bold uppercase text-gray-400">
-                          CVV
-                        </label>
-                        <Input
-                          id="cardCvvModal"
-                          className="mt-1 h-11 border-gray-200 bg-white"
-                          value={form.cardCvv}
-                          onChange={(e) =>
-                            setForm({
-                              ...form,
-                              cardCvv: e.target.value.replace(/\D/g, '').slice(0, 4),
-                            })
-                          }
-                          placeholder="123"
-                          inputMode="numeric"
-                          autoComplete="cc-csc"
-                          maxLength={4}
-                          required
-                        />
-                      </div>
                     </div>
-                  ) : (
-                    <div className="flex animate-in items-center gap-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 duration-200">
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500 font-black text-white">
-                        PIX
-                      </div>
-                      <p className="text-sm leading-tight text-emerald-800">
-                        Liberação <b>imediata</b> após o pagamento. Você receberá o código copia e cola após clicar em
-                        pagar.
-                      </p>
-                    </div>
-                  )}
+                  ) : null}
                 </div>
 
-                <div className="flex flex-col gap-6 rounded-[24px] border border-blue-300/50 bg-gradient-to-br from-blue-900 via-blue-700 to-blue-500 p-6 text-white md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <p className="mb-1 text-[10px] font-bold uppercase text-blue-100/90">Total a pagar</p>
-                    <p className="text-3xl font-black text-white">
-                      R$ {chargedAmount.toFixed(2).replace('.', ',')}
-                    </p>
-                    <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-blue-100/80">
-                      Pagamento Seguro
-                    </p>
+                <div className="rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
+                  <div className="space-y-1 border-b border-gray-100 pb-3 text-sm">
+                    {discountAmount > 0 ? (
+                      <div className="flex justify-between text-xs text-blue-600">
+                        <span>Desconto aplicado</span>
+                        <span className="font-medium">- R$ {discountAmount.toFixed(2).replace('.', ',')}</span>
+                      </div>
+                    ) : null}
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="text-sm font-bold text-gray-900">Total a pagar</span>
+                      <span className="text-xl font-black tabular-nums text-blue-700">
+                        R$ {chargedAmount.toFixed(2).replace('.', ',')}
+                      </span>
+                    </div>
                   </div>
+
+                  <label className="group mt-3 flex cursor-pointer items-start gap-2 rounded-md py-1.5 pl-0 pr-1 transition-colors hover:bg-gray-50/80">
+                    <div
+                      className={`relative mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${
+                        acceptedTerms ? 'border-blue-600 bg-blue-600' : 'border-gray-300 bg-white group-hover:border-blue-500'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={acceptedTerms}
+                        onChange={(e) => setAcceptedTerms(e.target.checked)}
+                        className="peer absolute h-full w-full cursor-pointer opacity-0"
+                        required
+                      />
+                      <svg
+                        className={`pointer-events-none h-3.5 w-3.5 text-white transition-opacity ${
+                          acceptedTerms ? 'opacity-100' : 'opacity-0'
+                        }`}
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={4}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <span className="select-none text-sm leading-relaxed text-gray-600">
+                      Concordo com os{' '}
+                      <Link
+                        to="/termos-de-uso"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-semibold text-blue-600 hover:underline"
+                      >
+                        Termos de Uso
+                      </Link>{' '}
+                      e autorizo o processamento do pagamento.
+                    </span>
+                  </label>
+
                   <Button
                     type="submit"
                     size="lg"
-                    disabled={submitting}
-                    className="h-14 min-w-[10rem] rounded-xl bg-emerald-400 font-black text-gray-900 shadow-none hover:scale-[1.02] hover:bg-emerald-300 hover:shadow-none disabled:opacity-50 disabled:hover:scale-100"
+                    disabled={submitting || !acceptedTerms}
+                    className="mt-3 h-11 w-full rounded-lg bg-emerald-500 text-sm font-black uppercase tracking-wide text-white shadow-md shadow-emerald-500/15 transition-all hover:bg-emerald-600 hover:shadow-lg hover:shadow-emerald-500/25 disabled:pointer-events-none disabled:opacity-50"
                   >
                     {submitting ? 'PROCESSANDO...' : 'PAGAR'}
                   </Button>
@@ -1369,9 +1480,9 @@ const LeadCheckout = () => {
               {invoiceUrl || pixQrCodeImage || pixCopyPaste ? (
                 <div
                   ref={pixSectionRef}
-                  className="mt-8 rounded-[32px] border-2 border-dashed border-blue-200 bg-blue-50/30 p-6 text-center animate-in fade-in duration-200"
+                  className="mt-8 rounded-[24px] border-2 border-dashed border-blue-200 bg-blue-50/30 p-6 text-center animate-in fade-in duration-200"
                 >
-                  <h4 className="mb-4 font-black text-blue-900">Finalize o seu PIX</h4>
+                  <h4 className="mb-4 text-lg font-black text-blue-900">Finalize o seu PIX</h4>
                   {pixQrCodeImage ? (
                     <img
                       src={pixQrCodeImage}
@@ -1381,7 +1492,7 @@ const LeadCheckout = () => {
                   ) : null}
                   {pixCopyPaste ? (
                     <div className="mx-auto mb-4 max-w-xs text-left">
-                      <p className="mb-2 text-left text-[10px] font-bold uppercase text-gray-400">
+                      <p className="mb-2 text-left text-[10px] font-bold uppercase tracking-wider text-gray-500">
                         Código Copia e Cola
                       </p>
                       <div className="mb-2 break-all rounded-lg border border-gray-200 bg-white p-3 font-mono text-[10px] text-gray-600">
@@ -1389,15 +1500,17 @@ const LeadCheckout = () => {
                       </div>
                       <Button
                         type="button"
-                        className="w-full rounded-xl bg-blue-600 py-3 text-xs font-bold text-white hover:bg-blue-700"
+                        className="h-12 w-full rounded-xl bg-blue-600 text-sm font-bold text-white shadow-none hover:bg-blue-700"
                         onClick={() => navigator.clipboard.writeText(pixCopyPaste)}
                       >
                         Copiar Código PIX
                       </Button>
                     </div>
                   ) : null}
-                  <p className="text-sm font-medium text-blue-600">
-                    Os leads serão enviados para <b>{form.buyerEmail}</b> após a confirmação.
+                  <p className="mt-4 text-sm font-medium text-blue-600">
+                    Os leads serão enviados para <br />
+                    <b className="text-blue-800">{form.buyerEmail}</b>
+                    <br /> após a confirmação.
                   </p>
                 </div>
               ) : null}
