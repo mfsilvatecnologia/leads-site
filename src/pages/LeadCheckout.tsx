@@ -209,8 +209,18 @@ const LeadCheckout = () => {
     onlyWithWhatsapp: false,
   });
 
+  const showQuoteCalculatingOverlay = useMemo(
+    () =>
+      quoteLoading &&
+      Boolean(form.state?.trim()) &&
+      Boolean(form.segment?.trim()) &&
+      !segmentDropdownOpen &&
+      !stateDropdownOpen,
+    [quoteLoading, form.state, form.segment, segmentDropdownOpen, stateDropdownOpen]
+  );
+
   useEffect(() => {
-    if (!quoteLoading) {
+    if (!showQuoteCalculatingOverlay) {
       setQuoteLoadingLabelIndex(0);
       return;
     }
@@ -218,7 +228,7 @@ const LeadCheckout = () => {
       setQuoteLoadingLabelIndex((i) => (i + 1) % QUOTE_LOADING_LABELS.length);
     }, QUOTE_LOADING_LABEL_INTERVAL_MS);
     return () => window.clearInterval(id);
-  }, [quoteLoading]);
+  }, [showQuoteCalculatingOverlay]);
 
   useEffect(() => {
     const loadCatalog = async () => {
@@ -262,8 +272,6 @@ const LeadCheckout = () => {
     return catalog.filter((entry) => entry.segments.some((s) => selectedSegments.includes(s.segment)));
   }, [catalog, selectedSegments]);
   const promptSelectState = selectedSegments.length > 0 && selectedStates.length === 0;
-  const showQuoteCalculatingOverlay =
-    quoteLoading && Boolean(form.state?.trim()) && Boolean(form.segment?.trim());
   const quoteLoadingLabel = QUOTE_LOADING_LABELS[quoteLoadingLabelIndex];
 
   const availableSegments = useMemo(() => {
@@ -892,7 +900,7 @@ const LeadCheckout = () => {
                         required
                       />
                       <div className="text-xs text-slate-500">
-                        {quoteLoading ? (
+                        {showQuoteCalculatingOverlay ? (
                           <QuoteLoadingCrossfadeText
                             activeIndex={quoteLoadingLabelIndex}
                             className="font-medium text-slate-500"
