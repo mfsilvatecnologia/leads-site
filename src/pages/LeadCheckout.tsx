@@ -11,6 +11,8 @@ import { EloFlatRoundedIcon } from 'react-svg-credit-card-payment-icons/elo';
 import { MastercardFlatRoundedIcon } from 'react-svg-credit-card-payment-icons/mastercard';
 import { VisaFlatRoundedIcon } from 'react-svg-credit-card-payment-icons/visa';
 const DEMO_URL = import.meta.env.VITE_DEMO_URL || '';
+/** Lista de demonstração estática em `public/demo/Demo.csv`. */
+const DEMO_CSV_PATH = '/demo/Demo.csv';
 const LEAD_UNIT_PRICE = 0.01;
 
 type Segment = { segment: string; availableLeads: number };
@@ -617,12 +619,10 @@ const LeadCheckout = () => {
               <p className="mt-6 max-w-xl text-lg text-blue-100">
                 Leads coletados e qualificados diretamente do Google Meu Negócio por meio de Inteligência Artificial.</p>
               <div className="mt-8 flex flex-wrap gap-4">
-                <Button
-                  size="lg"
-                  className="h-12 rounded-xl bg-white px-8 text-blue-900 hover:bg-slate-100"
-                  onClick={() => document.getElementById('gerar')?.scrollIntoView({ behavior: 'smooth' })}
-                >
-                  Gerar lista demostração
+                <Button size="lg" className="h-12 rounded-xl bg-white px-8 text-blue-900 hover:bg-slate-100" asChild>
+                  <a href={DEMO_CSV_PATH} download="Demo.csv" rel="noopener noreferrer">
+                    Ver Lista de Demostração
+                  </a>
                 </Button>
                 <div className="flex items-center rounded-xl border border-blue-300/50 bg-blue-500/30 px-6 py-3 text-sm font-semibold">
                   <span className="mr-3 inline-flex h-2 w-2 animate-pulse rounded-full bg-blue-300" />
