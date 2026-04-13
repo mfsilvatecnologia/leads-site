@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { apiRequest, getSupportRequestId, toUserMessage } from '@/lib/apiClient';
+import { cn } from '@/lib/utils';
 import { taxIdDigitsOnly, validateCheckoutTaxIdClient, type BuyerKind } from '@/lib/taxId';
 import { AmericanExpressFlatRoundedIcon } from 'react-svg-credit-card-payment-icons/americanexpress';
 import { EloFlatRoundedIcon } from 'react-svg-credit-card-payment-icons/elo';
@@ -14,6 +15,9 @@ const DEMO_URL = import.meta.env.VITE_DEMO_URL || '';
 /** Lista de demonstração estática em `public/demo/Demo.csv`. */
 const DEMO_CSV_PATH = '/demo/Demo.csv';
 const LEAD_UNIT_PRICE = 0.01;
+const QUOTE_LOADING_LABELS = ['Calculando os Leads...', 'Aguarde'] as const;
+/** Tempo entre trocas de mensagem (deve ser maior que o crossfade para cada texto “respirar”). */
+const QUOTE_LOADING_LABEL_INTERVAL_MS = 3500;
 
 type Segment = { segment: string; availableLeads: number };
 type CatalogState = { state: string; segments: Segment[] };
@@ -116,6 +120,38 @@ function preserveStateFieldForSegments(
     .join(', ');
 }
 
+function QuoteLoadingCrossfadeText({
+  activeIndex,
+  className,
+}: {
+  activeIndex: number;
+  className?: string;
+}) {
+  const safeIndex = activeIndex % QUOTE_LOADING_LABELS.length;
+  return (
+    <span
+      className={cn(
+        'relative inline-grid min-h-[1.35em] min-w-[10.5rem] place-items-center whitespace-nowrap',
+        className
+      )}
+    >
+      {QUOTE_LOADING_LABELS.map((label, i) => (
+        <span
+          key={label}
+          className={cn(
+            'col-start-1 row-start-1 inline-block text-center will-change-[opacity] motion-reduce:will-change-auto',
+            'transition-opacity duration-[1150ms] ease-[cubic-bezier(0.42,0,0.58,1)] motion-reduce:transition-none',
+            i === safeIndex ? 'opacity-100' : 'pointer-events-none opacity-0'
+          )}
+          aria-hidden={i !== safeIndex}
+        >
+          {label}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 const LeadCheckout = () => {
   const navigate = useNavigate();
   const [catalog, setCatalog] = useState<CatalogState[]>([]);
@@ -131,6 +167,7 @@ const LeadCheckout = () => {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [availableCount, setAvailableCount] = useState<number | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
+  const [quoteLoadingLabelIndex, setQuoteLoadingLabelIndex] = useState(0);
   const [couponCode, setCouponCode] = useState('');
   const [couponApplied, setCouponApplied] = useState('');
   const [discountAmount, setDiscountAmount] = useState(0);
@@ -144,6 +181,7 @@ const LeadCheckout = () => {
   const pixSectionRef = useRef<HTMLDivElement | null>(null);
   const segmentDropdownRef = useRef<HTMLDivElement | null>(null);
   const stateDropdownRef = useRef<HTMLDivElement | null>(null);
+  const stateFieldGuideScrolledRef = useRef(false);
 
   const [form, setForm] = useState({
     buyerKind: 'PF' as BuyerKind,
@@ -170,6 +208,17 @@ const LeadCheckout = () => {
     onlyWithEmail: false,
     onlyWithWhatsapp: false,
   });
+
+  useEffect(() => {
+    if (!quoteLoading) {
+      setQuoteLoadingLabelIndex(0);
+      return;
+    }
+    const id = window.setInterval(() => {
+      setQuoteLoadingLabelIndex((i) => (i + 1) % QUOTE_LOADING_LABELS.length);
+    }, QUOTE_LOADING_LABEL_INTERVAL_MS);
+    return () => window.clearInterval(id);
+  }, [quoteLoading]);
 
   useEffect(() => {
     const loadCatalog = async () => {
@@ -212,6 +261,11 @@ const LeadCheckout = () => {
     if (selectedSegments.length === 0) return catalog;
     return catalog.filter((entry) => entry.segments.some((s) => selectedSegments.includes(s.segment)));
   }, [catalog, selectedSegments]);
+  const promptSelectState = selectedSegments.length > 0 && selectedStates.length === 0;
+  const showQuoteCalculatingOverlay =
+    quoteLoading && Boolean(form.state?.trim()) && Boolean(form.segment?.trim());
+  const quoteLoadingLabel = QUOTE_LOADING_LABELS[quoteLoadingLabelIndex];
+
   const availableSegments = useMemo(() => {
     const segmentMap = new Map<string, Segment>();
     const source = selectedStates.length > 0 ? catalog.filter((c) => selectedStates.includes(c.state)) : catalog;
@@ -335,6 +389,7 @@ const LeadCheckout = () => {
   useEffect(() => {
     const run = async () => {
       if (!form.state || !form.segment) {
+        setQuoteLoading(false);
         setAvailableCount(null);
         setForm((prev) => ({ ...prev, quantity: 0 }));
         return;
@@ -381,6 +436,20 @@ const LeadCheckout = () => {
 
     pixSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [checkoutOpen, invoiceUrl, pixQrCodeImage, pixCopyPaste]);
+
+  useEffect(() => {
+    if (selectedSegments.length === 0 || selectedStates.length > 0) {
+      stateFieldGuideScrolledRef.current = false;
+      return;
+    }
+    if (stateFieldGuideScrolledRef.current) return;
+    stateFieldGuideScrolledRef.current = true;
+    const el = stateDropdownRef.current;
+    if (!el) return;
+    requestAnimationFrame(() => {
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    });
+  }, [selectedSegments.length, selectedStates.length]);
 
   useEffect(() => {
     const onPointerDown = (event: MouseEvent) => {
@@ -636,7 +705,27 @@ const LeadCheckout = () => {
               </div>
             </div>
 
-            <Card id="gerar" className="rounded-3xl border border-white/30 bg-white/95 text-slate-800 shadow-2xl backdrop-blur">
+            <Card
+              id="gerar"
+              className="relative overflow-hidden rounded-3xl border border-white/30 bg-white/95 text-slate-800 shadow-2xl backdrop-blur"
+            >
+              {showQuoteCalculatingOverlay ? (
+                <div
+                  className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-4 rounded-3xl bg-white/90 backdrop-blur-sm"
+                  role="status"
+                  aria-live="polite"
+                  aria-busy="true"
+                  aria-label={quoteLoadingLabel}
+                >
+                  <span
+                    className="h-10 w-10 animate-spin rounded-full border-[3px] border-blue-200 border-t-blue-600"
+                    aria-hidden
+                  />
+                  <p className="m-0 text-center text-base font-semibold text-blue-900">
+                    <QuoteLoadingCrossfadeText activeIndex={quoteLoadingLabelIndex} />
+                  </p>
+                </div>
+              ) : null}
               <CardHeader>
                 <CardTitle className="text-2xl text-blue-900">Gere sua lista de leads</CardTitle>
                 <CardDescription className="text-slate-600">
@@ -712,14 +801,19 @@ const LeadCheckout = () => {
                     </div>
                   </div>
 
-                  <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid items-start gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="state">Estados</Label>
                       <div ref={stateDropdownRef} className="relative">
                         <button
                           id="state"
                           type="button"
-                          className="flex h-11 w-full items-center justify-between rounded-xl border border-slate-300 bg-white px-3 text-left text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60"
+                          aria-describedby={promptSelectState ? 'state-step-hint' : undefined}
+                          className={cn(
+                            'flex h-11 w-full items-center justify-between rounded-xl border border-slate-300 bg-white px-3 text-left text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60',
+                            promptSelectState &&
+                              'border-blue-400 ring-2 ring-blue-500/70 animate-checkout-state-hint motion-reduce:animate-none motion-reduce:shadow-none'
+                          )}
                           onClick={() => setStateDropdownOpen((prev) => !prev)}
                         >
                           <span className="truncate">
@@ -777,6 +871,11 @@ const LeadCheckout = () => {
                           </div>
                         ) : null}
                       </div>
+                      {promptSelectState ? (
+                        <p id="state-step-hint" className="text-xs font-medium leading-snug text-blue-800">
+                          Agora selecione o(s) estado(s) da sua lista.
+                        </p>
+                      ) : null}
                     </div>
 
                     <div className="space-y-2">
@@ -793,11 +892,14 @@ const LeadCheckout = () => {
                         required
                       />
                       <div className="text-xs text-slate-500">
-                        {quoteLoading
-                          ? 'Calculando...'
-                          : availableCount !== null
-                          ? `Total disponível: ${availableCount}`
-                          : null}
+                        {quoteLoading ? (
+                          <QuoteLoadingCrossfadeText
+                            activeIndex={quoteLoadingLabelIndex}
+                            className="font-medium text-slate-500"
+                          />
+                        ) : availableCount !== null ? (
+                          `Total disponível: ${availableCount}`
+                        ) : null}
                       </div>
                     </div>
                   </div>
