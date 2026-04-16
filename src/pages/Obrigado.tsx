@@ -8,7 +8,7 @@ const Obrigado = () => {
     <main className="min-h-screen bg-slate-50 text-slate-900">
       <header className="border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="container mx-auto flex items-center justify-between px-4 py-3">
-          <img src="/logo-horizontal.png" alt="Lead Rápido" className="h-12 w-auto object-contain sm:h-14" />
+          <img src="/logo-horizontal.png" alt="Lead Rápido" className="h-10 w-auto object-contain sm:h-12" />
           <Button asChild variant="secondary" size="sm" className="border border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100">
             <Link to="/checkout">Voltar ao checkout</Link>
           </Button>

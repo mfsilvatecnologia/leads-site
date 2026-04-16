@@ -12,8 +12,8 @@ import { EloFlatRoundedIcon } from 'react-svg-credit-card-payment-icons/elo';
 import { MastercardFlatRoundedIcon } from 'react-svg-credit-card-payment-icons/mastercard';
 import { VisaFlatRoundedIcon } from 'react-svg-credit-card-payment-icons/visa';
 const DEMO_URL = import.meta.env.VITE_DEMO_URL || '';
-/** Lista de demonstração estática em `public/demo/Demo.csv`. */
-const DEMO_CSV_PATH = '/demo/Demo.csv';
+/** Lista de demonstração estática em `public/demo/demostração-lead-rapido.csv`. */
+const DEMO_CSV_PATH = '/demo/demostração-lead-rapido.csv';
 const LEAD_UNIT_PRICE = 0.01;
 const QUOTE_LOADING_LABELS = ['Calculando os Leads...', 'Aguarde'] as const;
 /** Tempo entre trocas de mensagem (deve ser maior que o crossfade para cada texto “respirar”). */
@@ -666,7 +666,7 @@ const LeadCheckout = () => {
             <img
               src="/logo-horizontal.png"
               alt="Lead Rápido"
-              className="h-12 w-auto object-contain sm:h-14"
+              className="h-10 w-auto object-contain sm:h-12"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -697,7 +697,7 @@ const LeadCheckout = () => {
                 Leads coletados e qualificados diretamente do Google Meu Negócio por meio de Inteligência Artificial.</p>
               <div className="mt-8 flex flex-wrap gap-4">
                 <Button size="lg" className="h-12 rounded-xl bg-white px-8 text-blue-900 hover:bg-slate-100" asChild>
-                  <a href={DEMO_CSV_PATH} download="Demo.csv" rel="noopener noreferrer">
+                  <a href={DEMO_CSV_PATH} download="demostração-lead-rapido.csv" rel="noopener noreferrer">
                     Ver Lista de Demostração
                   </a>
                 </Button>
