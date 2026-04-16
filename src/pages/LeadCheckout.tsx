@@ -1112,9 +1112,13 @@ const LeadCheckout = () => {
         <footer className="bg-gradient-to-br from-blue-900 via-blue-700 to-blue-500 px-6 py-12 text-white">
           <div className="mx-auto grid max-w-7xl gap-10 md:grid-cols-3">
             <div>
-              <div className="mb-4 flex items-center gap-2">
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded bg-white/20 font-bold">LR</span>
-                <span className="text-xl font-bold">Lead Rápido</span>
+              <div className="mb-4">
+                <img
+                  src="/logo-branca.png"
+                  alt="Lead Rápido"
+                  className="h-auto w-44 object-contain sm:w-52"
+                  loading="lazy"
+                />
               </div>
               <p className="max-w-sm text-sm text-blue-100">
                 A melhor plataforma de leads do Brasil.
