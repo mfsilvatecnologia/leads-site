@@ -131,7 +131,7 @@ function QuoteLoadingCrossfadeText({
   return (
     <span
       className={cn(
-        'relative inline-grid min-h-[1.35em] min-w-[10.5rem] place-items-center whitespace-nowrap',
+        'relative inline-grid min-h-[1.35em] w-full min-w-0 max-w-full place-items-center text-center sm:min-w-[10.5rem] sm:whitespace-nowrap',
         className
       )}
     >
@@ -661,21 +661,21 @@ const LeadCheckout = () => {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
-        <div className="container mx-auto flex items-center justify-between px-4 py-3">
-          <div className="flex items-center">
+        <div className="container mx-auto flex min-w-0 flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 shrink-0 items-center">
             <img
               src="/logo-horizontal.png"
               alt="Lead Rápido"
-              className="h-10 w-auto object-contain sm:h-12"
+              className="h-10 w-auto max-w-full object-contain sm:h-12"
             />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex w-full min-w-0 shrink-0 items-center sm:w-auto sm:justify-end">
             {DEMO_URL ? (
               <Button
                 asChild
                 variant="secondary"
                 size="sm"
-                className="border border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100"
+                className="w-full border border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100 sm:w-auto"
               >
                 <a href={DEMO_URL} target="_blank" rel="noreferrer">
                   Ver Lista Demonstração
@@ -687,10 +687,10 @@ const LeadCheckout = () => {
       </header>
 
       <main>
-        <section className="bg-gradient-to-br from-blue-900 via-blue-700 to-blue-500 px-6 py-12 text-white">
-          <div className="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-2">
-            <div>
-              <h1 className="text-4xl font-extrabold leading-tight md:text-5xl">
+        <section className="bg-gradient-to-br from-blue-900 via-blue-700 to-blue-500 px-4 py-10 text-white sm:px-6 sm:py-12">
+          <div className="mx-auto grid min-w-0 max-w-7xl grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-12">
+            <div className="min-w-0">
+              <h1 className="text-3xl font-extrabold leading-tight sm:text-4xl md:text-5xl">
                 Melhores Leads de <span className="text-blue-100">Empresas e Negócios</span> do Brasil
               </h1>
               <p className="mt-6 max-w-xl text-lg text-blue-100">
@@ -715,11 +715,11 @@ const LeadCheckout = () => {
 
             <Card
               id="gerar"
-              className="relative overflow-hidden rounded-3xl border border-white/30 bg-white/95 text-slate-800 shadow-2xl backdrop-blur"
+              className="relative w-full min-w-0 max-w-full overflow-visible rounded-3xl border border-white/30 bg-white/95 text-slate-800 shadow-2xl backdrop-blur"
             >
               {showQuoteCalculatingOverlay ? (
                 <div
-                  className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-4 rounded-3xl bg-white/90 backdrop-blur-sm"
+                  className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-4 overflow-hidden rounded-3xl bg-white/90 backdrop-blur-sm"
                   role="status"
                   aria-live="polite"
                   aria-busy="true"
@@ -763,29 +763,29 @@ const LeadCheckout = () => {
                       <button
                         id="segment"
                         type="button"
-                        className="flex h-11 w-full items-center justify-between rounded-xl border border-slate-300 bg-white px-3 text-left text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                        className="flex h-auto min-h-11 w-full min-w-0 items-center justify-between gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-left text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                         onClick={() => setSegmentDropdownOpen((prev) => !prev)}
                       >
-                        <span className="truncate">
+                        <span className="min-w-0 flex-1 break-words text-left leading-snug">
                           {selectedSegments.length > 0
                             ? selectedSegments.join(', ')
                             : 'Selecione um ou mais segmentos'}
                         </span>
-                        <span className="ml-2 text-xs text-slate-500">{segmentDropdownOpen ? '▲' : '▼'}</span>
+                        <span className="shrink-0 text-xs text-slate-500">{segmentDropdownOpen ? '▲' : '▼'}</span>
                       </button>
 
                       {segmentDropdownOpen ? (
-                        <div className="absolute z-20 mt-2 max-h-56 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
+                        <div className="absolute left-0 right-0 z-[60] mt-2 max-h-[min(14rem,50vh)] w-full min-w-0 overflow-y-auto overscroll-contain rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
                           {availableSegments.map((s) => {
                             const checked = selectedSegments.includes(s.segment);
                             return (
                               <label
                                 key={s.segment}
-                                className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm text-slate-800 hover:bg-blue-50"
+                                className="flex cursor-pointer items-start gap-2 rounded-md px-2 py-2 text-sm text-slate-800 hover:bg-blue-50"
                               >
                                 <input
                                   type="checkbox"
-                                  className="h-4 w-4 rounded border-slate-300 text-blue-600"
+                                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-blue-600"
                                   checked={checked}
                                   onChange={(e) => {
                                     setCouponApplied('');
@@ -800,7 +800,7 @@ const LeadCheckout = () => {
                                     });
                                   }}
                                 />
-                                <span>{s.segment}</span>
+                                <span className="min-w-0 flex-1 break-words leading-snug">{s.segment}</span>
                               </label>
                             );
                           })}
@@ -809,7 +809,7 @@ const LeadCheckout = () => {
                     </div>
                   </div>
 
-                  <div className="grid items-start gap-4 sm:grid-cols-2">
+                  <div className="grid min-w-0 items-start gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="state">Estados</Label>
                       <div ref={stateDropdownRef} className="relative">
@@ -818,24 +818,24 @@ const LeadCheckout = () => {
                           type="button"
                           aria-describedby={promptSelectState ? 'state-step-hint' : undefined}
                           className={cn(
-                            'flex h-11 w-full items-center justify-between rounded-xl border border-slate-300 bg-white px-3 text-left text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60',
+                            'flex h-auto min-h-11 w-full min-w-0 items-center justify-between gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-left text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60',
                             promptSelectState &&
                               'border-blue-400 ring-2 ring-blue-500/70 animate-checkout-state-hint motion-reduce:animate-none motion-reduce:shadow-none'
                           )}
                           onClick={() => setStateDropdownOpen((prev) => !prev)}
                         >
-                          <span className="truncate">
+                          <span className="min-w-0 flex-1 break-words text-left leading-snug">
                             {selectedStates.length > 0 ? selectedStates.join(', ') : 'Selecione um ou mais estados'}
                           </span>
-                          <span className="ml-2 text-xs text-slate-500">{stateDropdownOpen ? '▲' : '▼'}</span>
+                          <span className="shrink-0 text-xs text-slate-500">{stateDropdownOpen ? '▲' : '▼'}</span>
                         </button>
 
                         {stateDropdownOpen ? (
-                          <div className="absolute z-20 mt-2 max-h-56 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
-                            <label className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm font-semibold text-slate-800 hover:bg-blue-50">
+                          <div className="absolute left-0 right-0 z-[60] mt-2 max-h-[min(14rem,50vh)] w-full min-w-0 overflow-y-auto overscroll-contain rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
+                            <label className="flex cursor-pointer items-start gap-2 rounded-md px-2 py-2 text-sm font-semibold text-slate-800 hover:bg-blue-50">
                               <input
                                 type="checkbox"
-                                className="h-4 w-4 rounded border-slate-300 text-blue-600"
+                                className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-blue-600"
                                 checked={allStatesSelected}
                                 onChange={(e) => {
                                   setCouponApplied('');
@@ -847,18 +847,18 @@ const LeadCheckout = () => {
                                   });
                                 }}
                               />
-                              <span>Todos</span>
+                              <span className="min-w-0 flex-1 leading-snug">Todos</span>
                             </label>
                             {(availableStates || []).map((item) => {
                               const checked = selectedStates.includes(item.state);
                               return (
                                 <label
                                   key={item.state}
-                                  className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm text-slate-800 hover:bg-blue-50"
+                                  className="flex cursor-pointer items-start gap-2 rounded-md px-2 py-2 text-sm text-slate-800 hover:bg-blue-50"
                                 >
                                   <input
                                     type="checkbox"
-                                    className="h-4 w-4 rounded border-slate-300 text-blue-600"
+                                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-blue-600"
                                     checked={checked}
                                     onChange={(e) => {
                                       setCouponApplied('');
@@ -872,7 +872,7 @@ const LeadCheckout = () => {
                                       });
                                     }}
                                   />
-                                  <span>{item.state}</span>
+                                  <span className="min-w-0 flex-1 break-words leading-snug">{item.state}</span>
                                 </label>
                               );
                             })}
@@ -913,29 +913,31 @@ const LeadCheckout = () => {
                   </div>
 
                   <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
-                    <div className="grid gap-2 text-sm">
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold uppercase text-blue-700">Total estimado</span>
-                        <span className="text-xl font-black text-blue-950">{form.quantity || '--'} leads</span>
+                    <div className="grid min-w-0 gap-2 text-sm">
+                      <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-2">
+                        <span className="min-w-0 font-semibold uppercase text-blue-700">Total estimado</span>
+                        <span className="shrink-0 text-right text-xl font-black tabular-nums text-blue-950">
+                          {form.quantity || '--'} leads
+                        </span>
                       </div>
                       {availableCount !== null ? (
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-600">Leads no filtro</span>
-                          <span className="font-medium text-slate-800">{availableCount}</span>
+                        <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-2">
+                          <span className="min-w-0 text-slate-600">Leads no filtro</span>
+                          <span className="shrink-0 font-medium tabular-nums text-slate-800">{availableCount}</span>
                         </div>
                       ) : null}
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold uppercase text-blue-700">Preço</span>
-                        <span className="text-2xl font-black text-blue-950">
+                      <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-2">
+                        <span className="min-w-0 font-semibold uppercase text-blue-700">Preço</span>
+                        <span className="shrink-0 text-2xl font-black tabular-nums text-blue-950">
                           R$ {chargedAmount.toFixed(2).replace('.', ',')}
                         </span>
                       </div>
                       {discountAmount > 0 ? (
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-600">
+                        <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-2">
+                          <span className="min-w-0 text-slate-600">
                             Desconto {couponApplied ? `(${couponApplied})` : ''}
                           </span>
-                          <span className="font-medium text-blue-600">
+                          <span className="shrink-0 font-medium tabular-nums text-blue-600">
                             - R$ {discountAmount.toFixed(2).replace('.', ',')}
                           </span>
                         </div>
@@ -945,7 +947,7 @@ const LeadCheckout = () => {
                   </div>
 
                   <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                    <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                    <div className="grid min-w-0 gap-2 sm:grid-cols-[1fr_auto]">
                       <Input
                         placeholder="Cupom de desconto (ex: DESC10)"
                         value={couponCode}
@@ -1176,15 +1178,17 @@ const LeadCheckout = () => {
             }}
           />
 
-          <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-[24px] bg-white text-gray-900 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex shrink-0 items-center justify-between border-b border-gray-100 p-5 md:px-8 md:py-6">
-              <h3 className="text-xl font-extrabold tracking-tight text-blue-950">Finalize sua Compra</h3>
+          <div className="relative flex max-h-[90vh] w-full min-w-0 max-w-2xl flex-col overflow-hidden rounded-[24px] bg-white text-gray-900 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex min-w-0 shrink-0 items-center justify-between gap-3 border-b border-gray-100 p-5 md:px-8 md:py-6">
+              <h3 className="min-w-0 flex-1 text-xl font-extrabold tracking-tight text-blue-950">
+                Finalize sua Compra
+              </h3>
               <button
                 type="button"
                 onClick={() => {
                   if (!submitting) setCheckoutOpen(false);
                 }}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-gray-200 hover:text-gray-700"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-gray-200 hover:text-gray-700"
               >
                 ✕
               </button>
