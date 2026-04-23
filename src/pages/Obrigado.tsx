@@ -1,11 +1,30 @@
+import { Helmet } from 'react-helmet-async';
 import { Check, MailCheck, CircleAlert } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { SITE_URL } from '@/lib/siteUrl';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+
+const OBRIGADO_URL = `${SITE_URL}/obrigado`;
+const OBRIGADO_TITLE = 'Pagamento confirmado | Lead Rápido';
+const OBRIGADO_DESCRIPTION =
+  'Sua compra de leads B2B foi recebida. A base será enviada por e-mail após o processamento.';
 
 const Obrigado = () => {
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900">
+      <Helmet>
+        <title>{OBRIGADO_TITLE}</title>
+        <meta name="description" content={OBRIGADO_DESCRIPTION} />
+        <link rel="canonical" href={OBRIGADO_URL} />
+        <meta property="og:title" content={OBRIGADO_TITLE} />
+        <meta property="og:description" content={OBRIGADO_DESCRIPTION} />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={OBRIGADO_URL} />
+        <meta property="og:locale" content="pt_BR" />
+        <meta property="og:image" content={`${SITE_URL}/leads-link.png`} />
+        <meta name="twitter:card" content="summary_large_image" />
+      </Helmet>
       <header className="border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="container mx-auto flex items-center justify-between px-4 py-3">
           <img src="/logo-horizontal.png" alt="Lead Rápido" className="h-10 w-auto object-contain sm:h-12" />

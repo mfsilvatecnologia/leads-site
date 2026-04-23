@@ -1,3 +1,11 @@
+import { Helmet } from 'react-helmet-async';
+import { SITE_URL } from '@/lib/siteUrl';
+
+const POLITICA_PAGE_URL = `${SITE_URL}/politica-de-privacidade`;
+const POLITICA_TITLE = 'Política de Privacidade | Lead Rápido';
+const POLITICA_DESCRIPTION =
+  'Como a Lead Rápido trata dados pessoais, bases legais (LGPD), pagamentos, cookies e direitos do titular.';
+
 const POLITICA_PRIVACIDADE = `POLITICA DE PRIVACIDADE - LEAD RAPIDO
 
 1. CONTROLADORA E DISPOSICOES INICIAIS
@@ -75,13 +83,27 @@ Rua Antonio Torres Penedo, n 147, Sala 02, Bairro Sao Joaquim, Franca/SP, CEP 14
 12.3. A Lead Rapido atuara para responder as solicitacoes em prazo razoavel, nos termos da legislacao aplicavel.`;
 
 const PoliticaPrivacidade = () => (
-  <main className="min-h-screen bg-gray-50 px-6 py-12 text-gray-900">
+  <>
+    <Helmet>
+      <title>{POLITICA_TITLE}</title>
+      <meta name="description" content={POLITICA_DESCRIPTION} />
+      <link rel="canonical" href={POLITICA_PAGE_URL} />
+      <meta property="og:title" content={POLITICA_TITLE} />
+      <meta property="og:description" content={POLITICA_DESCRIPTION} />
+      <meta property="og:type" content="website" />
+      <meta property="og:url" content={POLITICA_PAGE_URL} />
+      <meta property="og:locale" content="pt_BR" />
+      <meta property="og:image" content={`${SITE_URL}/leads-link.png`} />
+      <meta name="twitter:card" content="summary_large_image" />
+    </Helmet>
+    <main className="min-h-screen bg-gray-50 px-6 py-12 text-gray-900">
     <div className="mx-auto max-w-4xl rounded-2xl bg-white p-8 shadow-sm">
       <h1 className="text-2xl font-bold text-blue-900">Politica de Privacidade</h1>
       <p className="mt-2 text-sm text-gray-500">Ultima atualizacao: 10/04/2026</p>
       <article className="mt-8 whitespace-pre-line text-sm leading-7">{POLITICA_PRIVACIDADE}</article>
     </div>
   </main>
+  </>
 );
 
 export default PoliticaPrivacidade;

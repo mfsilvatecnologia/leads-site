@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { UploadCloud, ShieldCheck, FileCheck2, DatabaseZap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -105,6 +106,10 @@ const AdminUpload = () => {
 
   return (
     <div className="dark min-h-screen bg-[#070A12] px-4 py-10 text-white">
+      <Helmet>
+        <title>Admin — importação | Lead Rápido</title>
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       <div className="mx-auto max-w-2xl">
         <div className="mb-6 flex items-center justify-between">
           <div>

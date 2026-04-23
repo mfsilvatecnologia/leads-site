@@ -1,6 +1,6 @@
-import { useLocation } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { SearchX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,6 +17,11 @@ const NotFound = () => {
 
   return (
     <div className="dark flex min-h-screen items-center justify-center bg-[#070A12] px-4 text-white">
+      <Helmet>
+        <title>Página não encontrada | Lead Rápido</title>
+        <meta name="description" content="A página solicitada não existe no site Lead Rápido." />
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       <main className="w-full max-w-lg">
         <Card className="border-white/10 bg-slate-950 text-slate-100 shadow-xl">
           <CardContent className="p-8 text-center">

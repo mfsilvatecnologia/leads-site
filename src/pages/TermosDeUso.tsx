@@ -1,3 +1,11 @@
+import { Helmet } from 'react-helmet-async';
+import { SITE_URL } from '@/lib/siteUrl';
+
+const TERMOS_PAGE_URL = `${SITE_URL}/termos-de-uso`;
+const TERMOS_TITLE = 'Termos de Uso | Lead Rápido';
+const TERMOS_DESCRIPTION =
+  'Termos de Uso da plataforma Lead Rápido: condições de aquisição de leads, pagamentos, privacidade e responsabilidades.';
+
 const TERMOS_DE_USO = `TERMOS DE USO - LEAD RAPIDO
 
 CLAUSULA 1 - DAS DISPOSICOES INICIAIS E ACEITE
@@ -79,13 +87,27 @@ CLAUSULA 11 - DAS DISPOSICOES FINAIS
 11.3. Fica eleito o foro da comarca de Franca/SP, com renuncia de qualquer outro, por mais privilegiado que seja, para dirimir eventuais controversias oriundas destes Termos.`;
 
 const TermosDeUso = () => (
-  <main className="min-h-screen bg-gray-50 px-6 py-12 text-gray-900">
+  <>
+    <Helmet>
+      <title>{TERMOS_TITLE}</title>
+      <meta name="description" content={TERMOS_DESCRIPTION} />
+      <link rel="canonical" href={TERMOS_PAGE_URL} />
+      <meta property="og:title" content={TERMOS_TITLE} />
+      <meta property="og:description" content={TERMOS_DESCRIPTION} />
+      <meta property="og:type" content="website" />
+      <meta property="og:url" content={TERMOS_PAGE_URL} />
+      <meta property="og:locale" content="pt_BR" />
+      <meta property="og:image" content={`${SITE_URL}/leads-link.png`} />
+      <meta name="twitter:card" content="summary_large_image" />
+    </Helmet>
+    <main className="min-h-screen bg-gray-50 px-6 py-12 text-gray-900">
     <div className="mx-auto max-w-4xl rounded-2xl bg-white p-8 shadow-sm">
       <h1 className="text-2xl font-bold text-blue-900">Termos de Uso</h1>
       <p className="mt-2 text-sm text-gray-500">Ultima atualizacao: 10/04/2026</p>
       <article className="mt-8 whitespace-pre-line text-sm leading-7">{TERMOS_DE_USO}</article>
     </div>
   </main>
+  </>
 );
 
 export default TermosDeUso;

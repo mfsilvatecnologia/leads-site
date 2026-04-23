@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { Link, useNavigate } from 'react-router-dom';
+import { SITE_URL } from '@/lib/siteUrl';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -152,8 +154,14 @@ function QuoteLoadingCrossfadeText({
   );
 }
 
+const CHECKOUT_DEFAULT_TITLE = 'Lead Rápido | Leads B2B Qualificados com Inteligência Artificial';
+const CHECKOUT_DEFAULT_DESCRIPTION =
+  'Compre leads B2B qualificados e listas de empresas atualizadas com inteligência artificial. Dados segmentados por região para prospecção e vendas. Comece agora.';
+
 const LeadCheckout = () => {
   const navigate = useNavigate();
+  /** Home é a URL canônica para `/` e `/checkout` (mesmo conteúdo). */
+  const canonicalUrl = `${SITE_URL}/`;
   const [catalog, setCatalog] = useState<CatalogState[]>([]);
   const [loadingCatalog, setLoadingCatalog] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -660,6 +668,24 @@ const LeadCheckout = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
+      <Helmet>
+        <title>{CHECKOUT_DEFAULT_TITLE}</title>
+        <meta name="description" content={CHECKOUT_DEFAULT_DESCRIPTION} />
+        <link rel="canonical" href={canonicalUrl} />
+        <meta property="og:title" content={CHECKOUT_DEFAULT_TITLE} />
+        <meta property="og:description" content={CHECKOUT_DEFAULT_DESCRIPTION} />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={canonicalUrl} />
+        <meta property="og:locale" content="pt_BR" />
+        <meta property="og:image" content={`${SITE_URL}/leads-link.png`} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:image:alt" content="Lead Rápido — Leads qualificados por apenas R$0,01 cada" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:image" content={`${SITE_URL}/leads-link.png`} />
+        <meta name="twitter:title" content={CHECKOUT_DEFAULT_TITLE} />
+        <meta name="twitter:description" content={CHECKOUT_DEFAULT_DESCRIPTION} />
+      </Helmet>
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="container mx-auto flex min-w-0 flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 shrink-0 items-center">
