@@ -1137,8 +1137,8 @@ const LeadCheckout = () => {
               <ul className="space-y-2">
                 <li>
                   WhatsApp:{' '}
-                  <a href="https://wa.me/5516981362498" className="font-medium hover:text-blue-200">
-                    (16) 98136-2498
+                  <a href="https://wa.me/5516992933505" className="font-medium hover:text-blue-200">
+                    (16) 99293-3505
                   </a>
                 </li>
                 <li>
