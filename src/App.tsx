@@ -5,12 +5,16 @@ import LeadCheckout from "./pages/LeadCheckout";
 import AdminUpload from "./pages/AdminUpload";
 import TermosDeUso from "./pages/TermosDeUso";
 import PoliticaPrivacidade from "./pages/PoliticaPrivacidade";
+import BlogIndex from "./pages/BlogIndex";
+import BlogPost from "./pages/BlogPost";
 
 const App = () => (
   <BrowserRouter>
     <Routes>
       <Route path="/" element={<LeadCheckout />} />
       <Route path="/checkout" element={<LeadCheckout />} />
+      <Route path="/blog" element={<BlogIndex />} />
+      <Route path="/blog/:slug" element={<BlogPost />} />
       <Route path="/termos-de-uso" element={<TermosDeUso />} />
       <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
       <Route path="/admin/upload-staging" element={<AdminUpload />} />

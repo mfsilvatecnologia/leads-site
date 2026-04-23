@@ -1167,9 +1167,11 @@ const LeadCheckout = () => {
                     (16) 99293-3505
                   </a>
                 </li>
-                <li>
-                  E-mail:{' '}
-                  <a href="mailto:contato@leadrapido.com.br" className="font-medium hover:text-blue-200">
+                <li className="max-w-sm">
+                  Solicite Leads de outros Segmentos através
+                  <br />
+                  do e-mail:{' '}
+                  <a href="mailto:contato@leadrapido.com.br" className="font-medium break-all hover:text-blue-200">
                     contato@leadrapido.com.br
                   </a>
                 </li>
@@ -1178,6 +1180,11 @@ const LeadCheckout = () => {
             <div className="text-sm md:text-right">
               <h4 className="mb-4 text-lg font-bold">Legal</h4>
               <p className="text-blue-100">
+                <Link to="/blog" className="underline-offset-4 hover:underline">
+                  Blog
+                </Link>
+                {' '}
+                •{' '}
                 <Link to="/politica-de-privacidade" className="underline-offset-4 hover:underline">
                   Politica de Privacidade
                 </Link>{' '}
