@@ -17,6 +17,7 @@ const DEMO_URL = import.meta.env.VITE_DEMO_URL || '';
 /** Lista de demonstração estática em `public/demo/demostração-lead-rapido.csv`. */
 const DEMO_CSV_PATH = '/demo/demostração-lead-rapido.csv';
 const LEAD_UNIT_PRICE = 0.01;
+const MIN_CHECKOUT_AMOUNT = 30;
 const QUOTE_LOADING_LABELS = ['Calculando os Leads...', 'Aguarde'] as const;
 /** Tempo entre trocas de mensagem (deve ser maior que o crossfade para cada texto “respirar”). */
 const QUOTE_LOADING_LABEL_INTERVAL_MS = 3500;
@@ -311,6 +312,7 @@ const LeadCheckout = () => {
 
   const grossAmount = useMemo(() => Number(form.quantity || 0) * LEAD_UNIT_PRICE, [form.quantity]);
   const chargedAmount = useMemo(() => Math.max(0, grossAmount - discountAmount), [grossAmount, discountAmount]);
+  const isBelowMinimumCheckoutAmount = chargedAmount > 0 && chargedAmount < MIN_CHECKOUT_AMOUNT;
 
   const cardSchemeForIcon = useMemo(() => cardSchemeFromNumber(form.cardNumber), [form.cardNumber]);
 
@@ -539,6 +541,11 @@ const LeadCheckout = () => {
       }
       if (couponCode && !couponApplied) {
         throw new Error('Clique em "Aplicar cupom" antes de pagar.');
+      }
+      if (isBelowMinimumCheckoutAmount) {
+        throw new Error(
+          `O valor mínimo para finalizar a compra é R$ ${MIN_CHECKOUT_AMOUNT.toFixed(2).replace('.', ',')}. Aumente a quantidade de leads para continuar.`
+        );
       }
       const taxIdError = validateCheckoutTaxIdClient(form.cpfCnpj, form.buyerKind);
       if (taxIdError) {
@@ -1577,6 +1584,12 @@ const LeadCheckout = () => {
                       </span>
                     </div>
                   </div>
+                  {isBelowMinimumCheckoutAmount ? (
+                    <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+                      Valor mínimo para checkout: R$ {MIN_CHECKOUT_AMOUNT.toFixed(2).replace('.', ',')}. Ajuste os
+                      filtros para aumentar o total.
+                    </div>
+                  ) : null}
 
                   <label className="group mt-3 flex cursor-pointer items-start gap-2 rounded-md py-1.5 pl-0 pr-1 transition-colors hover:bg-gray-50/80">
                     <div
@@ -1620,7 +1633,7 @@ const LeadCheckout = () => {
                   <Button
                     type="submit"
                     size="lg"
-                    disabled={submitting || !acceptedTerms}
+                    disabled={submitting || !acceptedTerms || isBelowMinimumCheckoutAmount}
                     className="mt-3 h-11 w-full rounded-lg bg-emerald-500 text-sm font-black uppercase tracking-wide text-white shadow-md shadow-emerald-500/15 transition-all hover:bg-emerald-600 hover:shadow-lg hover:shadow-emerald-500/25 disabled:pointer-events-none disabled:opacity-50"
                   >
                     {submitting ? 'PROCESSANDO...' : 'PAGAR'}

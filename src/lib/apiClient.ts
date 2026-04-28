@@ -84,6 +84,14 @@ export function toUserMessage(error: unknown): string {
   if (error instanceof ApiClientError) {
     const mappedMessage = ERROR_CODE_MESSAGES[error.code];
     if (mappedMessage) return mappedMessage;
+    const normalizedMessage = String(error.message || '').toLowerCase();
+    if (
+      normalizedMessage.includes('valor mínimo') ||
+      normalizedMessage.includes('valor minimo') ||
+      (normalizedMessage.includes('minimum') && normalizedMessage.includes('30'))
+    ) {
+      return 'O valor mínimo para finalizar a compra é R$ 30,00. Aumente a quantidade de leads para continuar.';
+    }
     return error.message;
   }
   if (error instanceof Error) {
