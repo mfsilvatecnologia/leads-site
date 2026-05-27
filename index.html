@@ -39,6 +39,23 @@
     <meta name="msapplication-TileImage" content="/android-chrome-192x192.png">
     <meta name="theme-color" content="#ffffff">
 
+    <!-- Push Rápido -->
+    <script src="https://pushrapidoapi.publix.ia.br/sdk/push-rapido.js" defer></script>
+    <script>
+      window.PushRapidoDeferred = window.PushRapidoDeferred || [];
+      PushRapidoDeferred.push(function () {
+        PushRapido.init({
+          apiUrl: "https://pushrapidoapi.publix.ia.br",
+          siteId: 1,
+          siteSlug: "site-1",
+          siteUrl: "https://leadrapido.com.br",
+          serviceWorkerPath: "/push/sw.js",
+          serviceWorkerScope: "/push/",
+          autoPrompt: true
+        });
+      });
+    </script>
+
   </head>
 
   <body>

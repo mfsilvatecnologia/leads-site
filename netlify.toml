@@ -10,6 +10,12 @@
   to = "/logo-horizontal.png"
   status = 200
 
+[[headers]]
+  for = "/push/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+    Service-Worker-Allowed = "/push/"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
