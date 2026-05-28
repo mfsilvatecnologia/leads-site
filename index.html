@@ -48,7 +48,7 @@
           apiUrl: "https://pushrapidoapi.publix.ia.br",
           siteId: 1,
           siteSlug: "site-1",
-          siteUrl: "https://leadrapido.com.br",
+          siteUrl: window.location.origin.replace(/\/$/, ""),
           serviceWorkerPath: "/push/sw.js",
           serviceWorkerScope: "/push/",
           autoPrompt: true
