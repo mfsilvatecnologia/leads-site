@@ -34,12 +34,12 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
     <link rel="shortcut icon" href="/favicon.ico">
-    <link rel="manifest" href="/site.webmanifest">
     <meta name="msapplication-TileColor" content="#ffffff">
     <meta name="msapplication-TileImage" content="/android-chrome-192x192.png">
     <meta name="theme-color" content="#ffffff">
 
-    <!-- Push Rápido -->
+    <!-- Push Rápido — cole no <head> de todas as páginas com inscrição -->
+    <link rel="manifest" href="https://pushrapidoapi.publix.ia.br/api/v1/sites/1/manifest.json" />
     <script src="https://pushrapidoapi.publix.ia.br/sdk/push-rapido.js" defer></script>
     <script>
       window.PushRapidoDeferred = window.PushRapidoDeferred || [];
@@ -48,9 +48,9 @@
           apiUrl: "https://pushrapidoapi.publix.ia.br",
           siteId: 1,
           siteSlug: "site-1",
-          siteUrl: window.location.origin.replace(/\/$/, ""),
+          siteUrl: "https://leadrapido.com.br",
           serviceWorkerPath: "/push/sw.js",
-          serviceWorkerScope: "/",
+          serviceWorkerScope: "/push/",
           autoPrompt: true
         });
       });

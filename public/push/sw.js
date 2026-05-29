@@ -1,5 +1,68 @@
 const API_URL = "https://pushrapidoapi.publix.ia.br";
 
+const COMPATIBLE_ICON_RE = /\.(png|jpe?g|webp)(\?|#|$)/i;
+
+function resolveAbsoluteUrl(url) {
+  if (!url || typeof url !== "string") return null;
+  const trimmed = url.trim();
+  if (!trimmed) return null;
+  try {
+    return new URL(trimmed, self.location.origin).href;
+  } catch {
+    return null;
+  }
+}
+
+function isSafariCompatibleIcon(url) {
+  const absolute = resolveAbsoluteUrl(url);
+  if (!absolute) return null;
+  if (!absolute.startsWith("https://")) return null;
+  if (/\.svg(\?|#|$)/i.test(absolute)) return null;
+  if (!COMPATIBLE_ICON_RE.test(absolute)) return null;
+  return absolute;
+}
+
+function buildNotificationOptions(data) {
+  const payloadData = data.data && typeof data.data === "object" ? data.data : {};
+  const options = {
+    body: data.body || "",
+    data: {
+      url: payloadData.url || "/",
+      campaignId: payloadData.campaignId ?? null,
+      siteId: payloadData.siteId ?? null,
+    },
+  };
+
+  const icon = isSafariCompatibleIcon(data.icon);
+  if (icon) {
+    options.icon = icon;
+  }
+
+  return options;
+}
+
+async function showPushNotification(title, data) {
+  const notificationTitle = title || "Notificação";
+  const withIcon = buildNotificationOptions(data);
+
+  try {
+    await self.registration.showNotification(notificationTitle, withIcon);
+    return;
+  } catch (err) {
+    console.error("[Push Rápido SW] showNotification com ícone falhou:", err);
+  }
+
+  const withoutIcon = buildNotificationOptions({ ...data, icon: null });
+  delete withoutIcon.icon;
+
+  try {
+    await self.registration.showNotification(notificationTitle, withoutIcon);
+  } catch (err) {
+    console.error("[Push Rápido SW] showNotification sem ícone falhou:", err);
+    throw err;
+  }
+}
+
 self.addEventListener("push", (event) => {
   if (!event.data) return;
 
@@ -10,17 +73,7 @@ self.addEventListener("push", (event) => {
     data = { title: "Notificação", body: event.data.text() };
   }
 
-  const options = {
-    body: data.body || "",
-    icon: data.icon || "/assets/icon.svg",
-    badge: "/assets/badge-72.svg",
-    data: {
-      url: data.data?.url || "/",
-      campaignId: data.data?.campaignId || null,
-    },
-  };
-
-  event.waitUntil(self.registration.showNotification(data.title || "Notificação", options));
+  event.waitUntil(showPushNotification(data.title, data));
 });
 
 self.addEventListener("notificationclick", (event) => {
