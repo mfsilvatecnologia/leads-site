@@ -42,6 +42,7 @@
     <meta name="theme-color" content="#ffffff">
 
     <!-- Push Rápido — cole no <head> de todas as páginas com inscrição -->
+    <!-- iPhone: inclua também <link rel="manifest" href="/site.webmanifest"> no MESMO domínio -->
     <script src="https://pushrapidoapi.publix.ia.br/sdk/push-rapido.js" defer></script>
     <script>
       window.PushRapidoDeferred = window.PushRapidoDeferred || [];
@@ -50,9 +51,9 @@
           apiUrl: "https://pushrapidoapi.publix.ia.br",
           siteId: 1,
           siteSlug: "site-1",
-          siteUrl: window.location.origin.replace(/\/$/, ""),
+          siteUrl: "https://leadrapido.com.br",
           serviceWorkerPath: "/push/sw.js",
-          serviceWorkerScope: "/",
+          serviceWorkerScope: "/push/",
           autoPrompt: true
         });
       });
