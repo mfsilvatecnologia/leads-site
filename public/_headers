@@ -1,3 +1,6 @@
 /push/sw.js
   Service-Worker-Allowed: /
   Cache-Control: no-cache
+
+/site.webmanifest
+  Content-Type: application/manifest+json
