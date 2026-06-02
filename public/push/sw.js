@@ -1,6 +1,9 @@
 const API_URL = "https://pushrapidoapi.publix.ia.br";
 
-const COMPATIBLE_ICON_RE = /\.(png|jpe?g|webp)(\?|#|$)/i;
+/** Ícone pequeno — OneSignal web: PNG/JPG/WebP, quadrado ~256px */
+const PUSH_ICON_RE = /\.(png|jpe?g|webp)(\?|#|$)/i;
+/** Banner grande — OneSignal: PNG/JPG/GIF/WebP, proporção ~2:1 */
+const PUSH_BANNER_RE = /\.(png|jpe?g|webp|gif)(\?|#|$)/i;
 const DEFAULT_TITLE = "Notificação";
 const DEFAULT_BODY = "Você tem uma nova mensagem.";
 
@@ -15,13 +18,33 @@ function resolveAbsoluteUrl(url) {
   }
 }
 
-function isSafariCompatibleIcon(url) {
+function isAllowedMediaProtocol(absolute) {
+  if (absolute.startsWith("https://")) return true;
+  try {
+    const u = new URL(absolute);
+    return (
+      u.protocol === "http:" &&
+      (u.hostname === "localhost" || u.hostname === "127.0.0.1")
+    );
+  } catch {
+    return false;
+  }
+}
+
+function resolvePushMedia(url, pattern) {
   const absolute = resolveAbsoluteUrl(url);
   if (!absolute) return null;
-  if (!absolute.startsWith("https://")) return null;
   if (/\.svg(\?|#|$)/i.test(absolute)) return null;
-  if (!COMPATIBLE_ICON_RE.test(absolute)) return null;
-  return absolute;
+  if (!pattern.test(absolute)) return null;
+  return isAllowedMediaProtocol(absolute) ? absolute : null;
+}
+
+function isCompatiblePushIcon(url) {
+  return resolvePushMedia(url, PUSH_ICON_RE);
+}
+
+function isCompatiblePushBanner(url) {
+  return resolvePushMedia(url, PUSH_BANNER_RE);
 }
 
 function omitEmptyValues(obj) {
@@ -53,6 +76,10 @@ function normalizePayloadData(raw) {
   return data;
 }
 
+/**
+ * Parse seguro do payload Web Push.
+ * Estrutura esperada: { title, body, icon?, image?, data: { url, campaignId?, siteId? } }
+ */
 function parsePushPayload(event) {
   console.log("[Push Rápido SW] push recebido");
 
@@ -74,14 +101,12 @@ function parsePushPayload(event) {
     console.error("[Push Rápido SW] falha ao parsear JSON:", jsonErr);
     try {
       const text = event.data.text();
-      console.log("[Push Rápido SW] fallback text():", text);
       return {
         title: DEFAULT_TITLE,
         body: typeof text === "string" && text.trim() ? text.trim() : DEFAULT_BODY,
         data: { url: "/" },
       };
-    } catch (textErr) {
-      console.error("[Push Rápido SW] falha ao ler text():", textErr);
+    } catch {
       return {
         title: DEFAULT_TITLE,
         body: DEFAULT_BODY,
@@ -93,7 +118,6 @@ function parsePushPayload(event) {
   if (typeof parsed === "string") {
     try {
       parsed = JSON.parse(parsed);
-      console.log("[Push Rápido SW] payload re-parseado de string:", parsed);
     } catch {
       return {
         title: DEFAULT_TITLE,
@@ -131,11 +155,15 @@ function parsePushPayload(event) {
     normalized.icon = parsed.icon.trim();
   }
 
+  if (typeof parsed.image === "string" && parsed.image.trim()) {
+    normalized.image = parsed.image.trim();
+  }
+
   console.log("[Push Rápido SW] payload normalizado:", normalized);
   return normalized;
 }
 
-function sanitizeNotificationOptions(data) {
+function buildNotificationOptions(data) {
   const payloadData = normalizePayloadData(data.data);
   const body =
     typeof data.body === "string" && data.body.trim() ? data.body.trim() : DEFAULT_BODY;
@@ -145,48 +173,84 @@ function sanitizeNotificationOptions(data) {
     data: omitEmptyValues(payloadData),
   };
 
-  const icon = isSafariCompatibleIcon(data.icon);
+  const icon = isCompatiblePushIcon(data.icon);
   if (icon) {
     options.icon = icon;
+  }
+
+  const image = isCompatiblePushBanner(data.image);
+  if (image) {
+    options.image = image;
   }
 
   return options;
 }
 
+/**
+ * Pré-carrega ícone e banner antes do showNotification.
+ * Android/Windows baixam a imagem ao exibir a notificação; sem await aqui o SW pode
+ * ser encerrado antes do download terminar.
+ */
+async function preloadNotificationMedia(urls) {
+  const unique = [...new Set(urls.filter(Boolean))];
+  if (unique.length === 0) return;
+
+  await Promise.all(
+    unique.map(async (url) => {
+      try {
+        const response = await fetch(url, { mode: "cors", cache: "force-cache" });
+        if (response.ok) {
+          await response.blob();
+          console.log("[Push Rápido SW] mídia pré-carregada:", url);
+        }
+      } catch (err) {
+        console.warn("[Push Rápido SW] preload falhou (seguindo mesmo assim):", url, err);
+      }
+    })
+  );
+}
+
 async function showPushNotification(title, data) {
   const notificationTitle =
     typeof title === "string" && title.trim() ? title.trim() : DEFAULT_TITLE;
-  const withIcon = sanitizeNotificationOptions(data);
 
-  console.log("[Push Rápido SW] showNotification (com ícone?):", {
+  const fullOptions = buildNotificationOptions(data);
+
+  console.log("[Push Rápido SW] preparando notificação:", {
     title: notificationTitle,
-    hasIcon: Boolean(withIcon.icon),
-    options: withIcon,
+    hasIcon: Boolean(fullOptions.icon),
+    hasImage: Boolean(fullOptions.image),
   });
 
+  await preloadNotificationMedia([fullOptions.icon, fullOptions.image]);
+
   try {
-    await self.registration.showNotification(notificationTitle, withIcon);
-    console.log("[Push Rápido SW] showNotification com ícone concluído");
+    await self.registration.showNotification(notificationTitle, fullOptions);
+    console.log("[Push Rápido SW] showNotification concluído");
     return;
   } catch (err) {
-    console.error("[Push Rápido SW] showNotification com ícone falhou:", err);
+    console.error("[Push Rápido SW] showNotification com mídia falhou:", err);
   }
 
-  const withoutIcon = sanitizeNotificationOptions({ ...data, icon: null });
-  delete withoutIcon.icon;
-
-  console.log("[Push Rápido SW] showNotification (sem ícone):", {
-    title: notificationTitle,
-    options: withoutIcon,
-  });
-
-  try {
-    await self.registration.showNotification(notificationTitle, withoutIcon);
-    console.log("[Push Rápido SW] showNotification sem ícone concluído");
-  } catch (err) {
-    console.error("[Push Rápido SW] showNotification sem ícone falhou:", err);
-    throw err;
+  if (fullOptions.image) {
+    const iconOnly = buildNotificationOptions({ ...data, image: null });
+    delete iconOnly.image;
+    await preloadNotificationMedia([iconOnly.icon]);
+    try {
+      await self.registration.showNotification(notificationTitle, iconOnly);
+      console.log("[Push Rápido SW] showNotification sem banner concluído");
+      return;
+    } catch (err) {
+      console.error("[Push Rápido SW] showNotification sem banner falhou:", err);
+    }
   }
+
+  const textOnly = buildNotificationOptions({ ...data, icon: null, image: null });
+  delete textOnly.icon;
+  delete textOnly.image;
+
+  await self.registration.showNotification(notificationTitle, textOnly);
+  console.log("[Push Rápido SW] showNotification só texto concluído");
 }
 
 self.addEventListener("push", (event) => {
@@ -195,14 +259,12 @@ self.addEventListener("push", (event) => {
       try {
         const payload = parsePushPayload(event);
         await showPushNotification(payload.title, payload);
-        console.log("[Push Rápido SW] pipeline push concluído");
       } catch (err) {
         console.error("[Push Rápido SW] falha no pipeline push:", err);
         await self.registration.showNotification(DEFAULT_TITLE, {
           body: DEFAULT_BODY,
           data: { url: "/" },
         });
-        console.log("[Push Rápido SW] notificação fallback exibida");
       }
     })()
   );
@@ -210,7 +272,9 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const urlDestino = event.notification.data?.url || "/";
+
+  const rawUrl = event.notification.data?.url || "/";
+  const targetUrl = resolveAbsoluteUrl(rawUrl) || self.location.origin + "/";
   const campaignId = event.notification.data?.campaignId;
   const siteId = event.notification.data?.siteId;
 
@@ -224,15 +288,22 @@ self.addEventListener("notificationclick", (event) => {
   }
 
   event.waitUntil(
-    clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {
+    (async () => {
+      const windowClients = await clients.matchAll({
+        type: "window",
+        includeUncontrolled: true,
+      });
+
       for (const client of windowClients) {
-        if (client.url === urlDestino && "focus" in client) {
+        const clientUrl = resolveAbsoluteUrl(client.url);
+        if (clientUrl === targetUrl && "focus" in client) {
           return client.focus();
         }
       }
+
       if (clients.openWindow) {
-        return clients.openWindow(urlDestino);
+        return clients.openWindow(targetUrl);
       }
-    })
+    })()
   );
 });

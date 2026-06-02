@@ -8,13 +8,25 @@ import remarkGfm from "remark-gfm";
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
-    port: 8080,
+    port: 8085,
   },
   plugins: [
     mdx({
       remarkPlugins: [remarkGfm],
     }),
     react(),
+    {
+      name: "push-sw-headers",
+      configureServer(server) {
+        server.middlewares.use((req, res, next) => {
+          if (req.url?.split("?")[0] === "/push/sw.js") {
+            res.setHeader("Service-Worker-Allowed", "/");
+            res.setHeader("Cache-Control", "no-cache");
+          }
+          next();
+        });
+      },
+    },
   ].filter(Boolean),
   resolve: {
     alias: {
