@@ -38,6 +38,8 @@ const ERROR_CODE_MESSAGES: Record<string, string> = {
   CSV_EMPTY_OR_INVALID: 'O CSV está vazio ou com formato inválido.',
   CSV_INSERT_FAILED: 'Falha ao importar o CSV. Tente novamente.',
   CSV_UPLOAD_PROCESSING_FAILED: 'Erro ao processar o upload do CSV.',
+  NO_TREATED_LEADS_FOUND: 'Nenhum lead encontrado para o filtro informado.',
+  DOWNLOAD_TREATED_FAILED: 'Não foi possível baixar a base tratada agora.',
   ROUTE_NOT_FOUND: 'Rota não encontrada.',
   METHOD_NOT_ALLOWED: 'Método não permitido para esta ação.',
   ACCESS_DENIED: 'Acesso negado para esta operação.',
@@ -78,6 +80,47 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
   }
 
   return (payload as T) || ({} as T);
+}
+
+function filenameFromContentDisposition(header: string | null): string | null {
+  if (!header) return null;
+  const utf8Match = /filename\*=UTF-8''([^;]+)/i.exec(header);
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1]);
+    } catch {
+      return utf8Match[1];
+    }
+  }
+  const asciiMatch = /filename="?([^";]+)"?/i.exec(header);
+  return asciiMatch?.[1] || null;
+}
+
+export async function apiDownload(path: string, init: RequestInit, fallbackFileName: string): Promise<{ fileName: string }> {
+  const response = await fetch(`${API_BASE_URL}${path}`, init);
+  const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+
+  if (!response.ok || contentType.includes('application/json')) {
+    const payload = await parseJsonSafe<ApiErrorPayload>(response);
+    const errorMessage = payload?.message || getDefaultMessageByStatus(response.status);
+    throw new ApiClientError(errorMessage, {
+      status: response.status,
+      code: payload?.code,
+      requestId: payload?.requestId,
+    });
+  }
+
+  const blob = await response.blob();
+  const fileName = filenameFromContentDisposition(response.headers.get('content-disposition')) || fallbackFileName;
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = objectUrl;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(objectUrl);
+  return { fileName };
 }
 
 export function toUserMessage(error: unknown): string {
